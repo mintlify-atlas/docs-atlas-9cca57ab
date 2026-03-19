@@ -1,0 +1,85 @@
+---
+title: "Get-OVApplianceGlobalSetting"
+description: "Retrieve global configuration settings from the HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves one or more global configuration settings from the HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVApplianceGlobalSetting
+    [-Name <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVApplianceGlobalSetting` queries the appliance global settings store and returns all settings, or filters by name when `-Name` is provided. The `-Name` parameter supports wildcard matching.
+
+Global settings control appliance-wide behavior such as login banner text, session timeout durations, and other administrative options. Settings are read-only with this cmdlet; use `Set-OVApplianceGlobalSetting` to modify a setting value.
+
+The cmdlet returns `HPEOneView.Appliance.GlobalSetting` typed objects.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  Filters the returned settings to those whose name matches the provided value. Supports wildcard characters (e.g. `*session*`). When omitted, all global settings are returned.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specifies the HPE OneView appliance connection(s) to query. Defaults to the default connection from `${Global:ConnectedSessions}`. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+**Example 1: Retrieve all global settings**
+
+```powershell
+Get-OVApplianceGlobalSetting
+```
+
+Returns all global configuration settings for the default connected appliance.
+
+**Example 2: Retrieve a specific setting by name**
+
+```powershell
+Get-OVApplianceGlobalSetting -Name 'applianceSessionTimeout'
+```
+
+Returns the `applianceSessionTimeout` global setting.
+
+**Example 3: Filter settings using a wildcard**
+
+```powershell
+Get-OVApplianceGlobalSetting -Name '*session*'
+```
+
+Returns all global settings whose name contains the word "session".
+
+**Example 4: Query a specific appliance**
+
+```powershell
+Get-OVApplianceGlobalSetting -ApplianceConnection $MyConnection
+```
+
+Retrieves all global settings from the specified appliance connection.
+
+## Output
+
+`HPEOneView.Appliance.GlobalSetting`
+
+An object per setting containing the following properties:
+
+| Property | Description |
+|---|---|
+| `Name` | The setting identifier |
+| `Value` | The current setting value |
+| `Group` | The settings group category |
+| `SettingCategory` | A finer-grained category within the group |
+| `Created` | Timestamp when the setting was created |
+| `Modified` | Timestamp of the last modification |
+| `Uri` | The REST API URI for this setting |

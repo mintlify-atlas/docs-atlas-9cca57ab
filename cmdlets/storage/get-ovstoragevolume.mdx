@@ -1,0 +1,129 @@
+---
+title: "Get-OVStorageVolume"
+description: "Retrieve storage volume objects managed by HPE OneView."
+---
+
+## Synopsis
+
+Retrieves storage volumes managed by HPE OneView.
+
+## Syntax
+
+### Default
+
+```powershell
+Get-OVStorageVolume
+    [-Name <String>]
+    [-StorageVolumeTemplate <Object>]
+    [-Available]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### From server profile or template
+
+```powershell
+Get-OVStorageVolume
+    -InputObject <Object>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVStorageVolume` returns volume objects from HPE OneView's storage inventory. Volumes may be privately assigned to a server profile, shared across multiple profiles, or available (unattached).
+
+Pass a server profile or server profile template object via `-InputObject` to return only the volumes attached to that resource. Use `-Available` to list volumes that are not currently attached to any server profile.
+
+Returned objects carry the `HPEOneView.Storage.Volume` type and can be piped to `Get-OVProfileAttachVolume`, `Set-OVStorageVolume`, or `Remove-OVStorageVolume`.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  Name of the storage volume. Supports wildcard matching. Aliased as `VolumeName`.
+</ParamField>
+
+<ParamField path="InputObject" type="Object">
+  A server profile or server profile template object. When provided, returns only the volumes attached to that resource. Accepts pipeline input. Aliased as `ServerProfile` and `ServerProfileTemplate`.
+</ParamField>
+
+<ParamField path="StorageVolumeTemplate" type="Object">
+  Filters volumes to those created from the specified volume template. Accepts a template name or an `HPEOneView.Storage.VolumeTemplate` object. Aliased as `SVT`.
+</ParamField>
+
+<ParamField path="Available" type="SwitchParameter">
+  Returns only volumes that are not currently attached to any server profile (available for assignment).
+</ParamField>
+
+<ParamField path="Label" type="String">
+  Filter results to resources that have this label assigned.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Filter by HPE OneView scope. Defaults to `AllResourcesInScope`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  HPE OneView appliance connection. Defaults to the default connected session. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### List all storage volumes
+
+```powershell
+Get-OVStorageVolume
+```
+
+### Get a volume by name
+
+```powershell
+$volume1 = Get-OVStorageVolume -Name Volume1
+```
+
+### Get a shared volume by name
+
+```powershell
+$volume2 = Get-OVStorageVolume -Name SharedVolume1
+```
+
+### Get volumes and attach them to a server profile
+
+```powershell
+# From Server_Multiconnection_SAN_Storage_Sample.ps1
+$volume1 = Get-OVStorageVolume -Name Volume1 | Get-OVProfileAttachVolume -volumeid 1
+$volume2 = Get-OVStorageVolume -Name SharedVolume1 | Get-OVProfileAttachVolume -volumeid 2
+$attachVolumes = @($volume1, $volume2)
+
+$task = New-OVProfile -name $profileName -server $server -connections $conList `
+    -SANStorage -HostOsType VMware -StorageVolume $attachVolumes -Async
+```
+
+### List volumes not attached to any server profile
+
+```powershell
+Get-OVStorageVolume -Available
+```
+
+### Get volumes created from a specific template
+
+```powershell
+$svt = Get-OVStorageVolumeTemplate -Name "Gold-Tier-Template"
+Get-OVStorageVolume -StorageVolumeTemplate $svt
+```
+
+## Output
+
+`HPEOneView.Storage.Volume`
+
+Each object includes the volume name, storage pool, provisioned capacity, provisioning type (Thin/Full), sharing state, and attached server profiles.
+
+## Related cmdlets
+
+- [New-OVStorageVolume](/cmdlets/storage/new-ovstoragevolume)
+- [Set-OVStorageVolume](/cmdlets/storage/set-ovstoragevolume)
+- [Remove-OVStorageVolume](/cmdlets/storage/remove-ovstoragevolume)
+- [Get-OVStoragePool](/cmdlets/storage/get-ovstoragepool)
+- [Get-OVStorageVolumeTemplate](/cmdlets/storage/get-ovstoragevolumetemplate)

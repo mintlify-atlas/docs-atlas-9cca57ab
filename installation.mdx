@@ -1,0 +1,318 @@
+---
+title: "Installation"
+description: "Install the HPE OneView PowerShell Library on Windows, Linux, or macOS from PowerShell Gallery or manually."
+---
+
+The HPE OneView PowerShell Library is published to the [PowerShell Gallery](https://www.powershellgallery.com/packages/HPEOneView.1000) and supports Windows PowerShell 5.1, PowerShell 7.x on Windows, and PowerShell Core 7.x on Linux and macOS.
+
+## Prerequisites
+
+| Requirement | Details |
+|---|---|
+| PowerShell version | Windows PowerShell 5.1, or PowerShell 7.x |
+| .NET Framework (Windows PS 5.1) | 4.7.2 or newer (requires Windows 10 1709+) |
+| .NET (PowerShell 7.x) | Bundled with PowerShell 7 — no separate install needed |
+| PowerShellGet | Included with PowerShell 5.1+; update with `Install-Module PowerShellGet` if needed |
+
+<Warning>
+  Windows PowerShell 4.0 and earlier are not supported. Windows 10 1709 (Fall Creators Update, build 16299) or newer is required when using Windows PowerShell 5.1, because the library's C# class assembly targets .NET Standard 2.1 and requires .NET Framework 4.7.2.
+</Warning>
+
+## Installing from PowerShell Gallery
+
+<Tabs>
+  <Tab title="Windows">
+    <Steps>
+      <Step title="Open an elevated PowerShell session">
+        Right-click **Windows PowerShell** or **PowerShell 7** and select **Run as Administrator**.
+
+        If you cannot use an elevated session, install for the current user instead (see the tip at the end of this step).
+      </Step>
+
+      <Step title="Install the module">
+        ```powershell
+        Install-Module HPEOneView.1000
+        ```
+
+        If prompted to trust the PSGallery repository, enter `Y`.
+
+        <Tip>
+          To install without administrator rights, scope the install to the current user:
+
+          ```powershell
+          Install-Module HPEOneView.1000 -Scope CurrentUser
+          ```
+        </Tip>
+      </Step>
+
+      <Step title="Verify the installation">
+        ```powershell
+        Get-Module HPEOneView.1000 -ListAvailable
+        ```
+
+        The output should list the module with version `10.0.4265.2221`.
+      </Step>
+
+      <Step title="Import the module">
+        ```powershell
+        Import-Module HPEOneView.1000
+        ```
+
+        Confirm it is loaded and check the library version:
+
+        ```powershell
+        Get-OVVersion
+        ```
+      </Step>
+    </Steps>
+
+    <Note>
+      If you are running **Windows PowerShell 5.1** and receive an error about a missing .NET Framework dependency when importing the module, download and install the [.NET Framework 4.7.2 offline installer](https://go.microsoft.com/fwlink/?LinkId=863265) and then retry.
+    </Note>
+  </Tab>
+
+  <Tab title="Linux / macOS">
+    <Steps>
+      <Step title="Install PowerShell Core 7.x">
+        Follow the official Microsoft instructions to install PowerShell 7 for your distribution:
+
+        - **Ubuntu / Debian**: [aka.ms/install-powershell-linux](https://aka.ms/install-powershell-linux)
+        - **macOS**: [aka.ms/install-powershell-macos](https://aka.ms/install-powershell-macos)
+
+        After installation, launch a PowerShell session:
+
+        ```bash
+        pwsh
+        ```
+      </Step>
+
+      <Step title="Install the module">
+        ```powershell
+        Install-Module HPEOneView.1000
+        ```
+
+        If prompted to trust the PSGallery repository, enter `Y`.
+      </Step>
+
+      <Step title="Trust the appliance CA certificate">
+        On Linux and macOS, PowerShell uses the operating system's SSL certificate store. If your HPE OneView appliance uses a certificate signed by a private or internal CA, you must add that CA's certificate to the OS trust store before connecting.
+
+        **For Ubuntu 18.04 / Debian-based distributions:**
+
+        1. Export the issuing CA certificate and any intermediate CAs in PEM format (the format that begins with `-----BEGIN CERTIFICATE-----`).
+
+        2. Copy the PEM file to the system CA directory:
+
+           ```bash
+           sudo cp MyCA.pem /usr/local/share/ca-certificates/MyCA.crt
+           ```
+
+        3. Rebuild the system certificate bundle:
+
+           ```bash
+           sudo update-ca-certificates
+           ```
+
+           Expected output:
+
+           ```bash
+           Updating certificates in /etc/ssl/certs...
+           1 added, 0 removed; done.
+           Running hooks in /etc/ca-certificates/update.d...
+           done.
+           ```
+
+        4. Verify the module loads and connects to your appliance:
+
+           ```powershell
+           Import-Module HPEOneView.1000
+           Connect-OVMgmt -Hostname MyAppliance.FQDN.Name -Credential $credential
+           ```
+
+        <Warning>
+          If you only need to test basic functionality and want to bypass certificate validation temporarily, you can set the following **in development environments only**. This is a security risk and is not supported in production:
+
+          ```powershell
+          [HPEOneView.PKI.SslValidation]::IgnoreCertErrors = $true
+          ```
+        </Warning>
+      </Step>
+
+      <Step title="Import the module and verify">
+        ```powershell
+        Import-Module HPEOneView.1000
+        Get-OVVersion
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="WSL (Windows Subsystem for Linux)">
+    Windows Subsystem for Linux (WSL) is tested and supported using the Ubuntu 18.04 image. WSL requires Windows 10 1709 (Fall Creators Update) or newer.
+
+    <Steps>
+      <Step title="Enable WSL and install Ubuntu">
+        Follow the [Microsoft WSL installation guide](https://docs.microsoft.com/en-us/windows/wsl/install-win10) to enable WSL and install the Ubuntu 18.04 image from the Microsoft Store.
+      </Step>
+
+      <Step title="Install PowerShell Core inside WSL">
+        From within your WSL Ubuntu session, install PowerShell 7:
+
+        ```bash
+        # Update package list
+        sudo apt-get update
+
+        # Install prerequisites
+        sudo apt-get install -y wget apt-transport-https
+
+        # Download and register the Microsoft package repository
+        wget -q "https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb"
+        sudo dpkg -i packages-microsoft-prod.deb
+
+        # Install PowerShell
+        sudo apt-get update && sudo apt-get install -y powershell
+        ```
+      </Step>
+
+      <Step title="Install and configure the HPE OneView module">
+        Launch PowerShell inside WSL and install the module:
+
+        ```bash
+        pwsh
+        ```
+
+        ```powershell
+        Install-Module HPEOneView.1000
+        Import-Module HPEOneView.1000
+        ```
+      </Step>
+
+      <Step title="Configure CA certificates for SSL">
+        If your appliance uses a private CA, follow the same CA certificate trust steps as the Linux/macOS tab above to add the issuing CA to Ubuntu's certificate store and run `sudo update-ca-certificates`.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Offline / manual installation
+
+If the target system does not have internet access, use `Save-Module` on a connected machine to download the module files, then copy and install them manually.
+
+<Steps>
+  <Step title="Save the module on a connected machine">
+    On a machine with internet access and PowerShell, save the module to a local directory:
+
+    ```powershell
+    Save-Module -Name HPEOneView.1000 -Path C:\Temp\Modules
+    ```
+
+    This downloads all module files including the required `HPEOneView_Classes.dll` assembly into `C:\Temp\Modules\HPEOneView.1000\10.0.4265.2221\`.
+  </Step>
+
+  <Step title="Transfer the files to the target system">
+    Copy the saved module directory to the target machine via USB, file share, or any available transfer method.
+  </Step>
+
+  <Step title="Place the module in a PowerShell module path">
+    Move the module folder to one of the directories listed in `$env:PSModulePath`.
+
+    **System-wide (all users):**
+
+    ```powershell
+    # Windows example
+    C:\Program Files\PowerShell\Modules\HPEOneView.1000\10.0.4265.2221\
+    ```
+
+    **Current user only:**
+
+    ```powershell
+    # Windows example
+    $HOME\Documents\PowerShell\Modules\HPEOneView.1000\10.0.4265.2221\
+    ```
+  </Step>
+
+  <Step title="Import and verify">
+    ```powershell
+    Import-Module HPEOneView.1000
+    Get-Module HPEOneView.1000
+    ```
+  </Step>
+</Steps>
+
+## Verifying the installation
+
+Use these commands to confirm the module is installed and available:
+
+```powershell
+# List installed module versions
+Get-Module HPEOneView.1000 -ListAvailable
+
+# Import the module
+Import-Module HPEOneView.1000
+
+# Show library and API version information
+Get-OVVersion
+```
+
+`Get-OVVersion` returns the library version (`10.0.4265.2221`) and the supported HPE OneView X-API version (`7600`).
+
+## Module version compatibility
+
+Each library version targets a specific HPE OneView appliance API version. Choose the library version that matches your HPE OneView appliance.
+
+| Library module | HPE OneView version | PowerShell Gallery |
+|---|---|---|
+| `HPEOneView.1000` | 10.00 | [HPEOneView.1000](https://www.powershellgallery.com/packages/HPEOneView.1000) |
+| `HPEOneView.910` | 9.10 | [HPEOneView.910](https://www.powershellgallery.com/packages/HPEOneView.910) |
+| `HPEOneView.900` | 9.00 | [HPEOneView.900](https://www.powershellgallery.com/packages/HPEOneView.900) |
+| `HPEOneView.660` | 6.60 | [HPEOneView.660](https://www.powershellgallery.com/packages/HPEOneView.660) |
+
+<Note>
+  The library module version number corresponds directly to the HPE OneView appliance version. Use `HPEOneView.1000` with HPE OneView 10.00 appliances.
+</Note>
+
+## Known limitations
+
+<AccordionGroup>
+  <Accordion title="Only one library version per session">
+    The HPE OneView PowerShell library does not support loading multiple versions in the same PowerShell session. If you attempt to import a second version while one is already loaded, the import will fail with an error:
+
+    ```
+    Another HPE OneView module is already loaded. The HPE OneView PowerShell library
+    does not support loading multiple versions of libraries within the same console.
+    ```
+
+    Start a new PowerShell session to switch between library versions.
+  </Accordion>
+
+  <Accordion title="FormatPX not supported on PowerShell Core">
+    On Windows, the library uses [FormatPX](https://github.com/KirkMunro/FormatPx) to fix formatting inconsistencies in `Format-List` and `Format-Table`. FormatPX is not supported on PowerShell Core.
+
+    As a result, when `Get-OVNetwork` returns results with multiple network resource types (Ethernet, Fibre Channel, FCoE), only the first type will render correctly in table format. The remaining types will display their full raw object properties.
+
+    **Workaround:** Filter by network type to get consistent output:
+
+    ```powershell
+    Get-OVNetwork -Type Ethernet
+    Get-OVNetwork -Type FibreChannel
+    Get-OVNetwork -Type FibreChannelOverEthernet
+    ```
+  </Accordion>
+
+  <Accordion title="Get-OVCommandTrace verbose output limitation">
+    `Get-OVCommandTrace` generates a trace log, but due to a limitation in the .NET Standard API, verbose and debug messages emitted by the HPE OneView C# class library are not automatically captured in the trace file.
+
+    If you enable verbose or debug output via `[HPEOneView.Config]::EnableVerbose = $true` or `[HPEOneView.Config]::EnableDebug = $true`, use **Select All** and copy/paste the console output into the generated log file when reporting issues.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Connect to your appliance and run your first commands
+  </Card>
+  <Card title="Appliance connections" icon="plug" href="/concepts/appliance-connections">
+    Learn how multiple simultaneous connections work
+  </Card>
+</CardGroup>

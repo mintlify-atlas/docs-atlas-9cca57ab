@@ -1,0 +1,205 @@
+---
+title: "Connecting to an appliance"
+description: "Learn how to authenticate to HPE OneView appliances using credentials, PSCredential objects, certificates, and how to manage multiple simultaneous connections."
+---
+
+Before running any cmdlet, you must establish an authenticated session with `Connect-OVMgmt`. Sessions are stored in the `$Global:ConnectedSessions` variable and are used automatically by all subsequent cmdlets.
+
+## Basic credential connection
+
+The simplest way to connect is with a username and password. The `-Password` parameter accepts either a plain `String` or a `SecureString`.
+
+<Warning>
+Passing plain-text passwords is deprecated and will be removed in a future release. Use `-Credential` with a `PSCredential` object instead.
+</Warning>
+
+```powershell
+Import-Module HPEOneView.1000
+
+$ApplianceConnection = Connect-OVMgmt -Hostname "hpov.example.com" -UserName Administrator -Password "MyPassword"
+```
+
+## Connecting with a PSCredential object
+
+The preferred approach is to pass a `PSCredential` object. This keeps credentials out of scripts and works naturally with PowerShell's credential management.
+
+<CodeGroup>
+
+```powershell Interactive prompt
+# Prompts for username and password in a secure dialog
+$Credential = Get-Credential -Username Administrator -Message "HPE OneView password"
+$ApplianceConnection = Connect-OVMgmt -Hostname "hpov.example.com" -Credential $Credential
+```
+
+```powershell Constructed programmatically
+$SecurePass = ConvertTo-SecureString "MyPassword" -AsPlainText -Force
+$Credential  = [System.Management.Automation.PSCredential]::new("Administrator", $SecurePass)
+$ApplianceConnection = Connect-OVMgmt -Hostname "hpov.example.com" -Credential $Credential
+```
+
+</CodeGroup>
+
+<Tip>
+Store credentials with `Export-Clixml` / `Import-Clixml` so scripts can run non-interactively without embedding plain-text passwords.
+</Tip>
+
+## Connecting with a certificate (2FA / smart card)
+
+For environments that require two-factor authentication or smart-card login, pass the client certificate object to `-Certificate`.
+
+<Steps>
+  <Step title="Retrieve the certificate from the Windows certificate store">
+    ```powershell
+    $Cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -match "john.doe" }
+    ```
+  </Step>
+  <Step title="Connect using the certificate">
+    ```powershell
+    $ApplianceConnection = Connect-OVMgmt -Hostname "hpov.example.com" -Certificate $Cert
+    ```
+  </Step>
+</Steps>
+
+<Note>
+Certificate-based authentication requires the appliance to be configured for two-factor authentication and the user account to have a certificate mapped. See your appliance security settings for details.
+</Note>
+
+## Connecting to multiple appliances simultaneously
+
+You can maintain sessions to several appliances at the same time. Every connection is tracked in `$Global:ConnectedSessions`.
+
+```powershell
+$Credential = Get-Credential -Username Administrator -Message "Password"
+
+$Conn1 = Connect-OVMgmt -Hostname "hpov1.example.com" -Credential $Credential
+$Conn2 = Connect-OVMgmt -Hostname "hpov2.example.com" -Credential $Credential
+$Conn3 = Connect-OVMgmt -Hostname "hpov3.example.com" -Credential $Credential
+
+# Inspect all active sessions
+$Global:ConnectedSessions
+```
+
+When multiple sessions exist, cmdlets that accept `-ApplianceConnection` use the **default** connection unless you specify otherwise.
+
+```powershell
+# Target a specific appliance by passing the connection object
+Get-OVServer -ApplianceConnection $Conn2
+
+# Or iterate over all appliances
+ForEach ($Session in $Global:ConnectedSessions) {
+
+    Get-OVServer -ApplianceConnection $Session
+
+}
+```
+
+## Managing the default connection
+
+The first connection established becomes the default. When you add more connections you can change which one is default with `Set-OVApplianceDefaultConnection`.
+
+```powershell
+# Promote hpov2 to the default connection
+$Global:ConnectedSessions | Where-Object Name -EQ "hpov2.example.com" | Set-OVApplianceDefaultConnection
+
+# Confirm the change
+$Global:ConnectedSessions | Select-Object Name, Default
+```
+
+After this, cmdlets without an explicit `-ApplianceConnection` parameter will target `hpov2.example.com`.
+
+## Checking whether a session already exists
+
+If your script might be called more than once in the same session, guard the connection call:
+
+```powershell
+if (-not $ConnectedSessions) {
+
+    $Credential = Get-Credential -Username Administrator -Message "Password"
+    $ApplianceConnection = Connect-OVMgmt -Hostname "hpov.example.com" -Credential $Credential
+
+}
+```
+
+This pattern comes directly from the sample scripts shipped with the library.
+
+## SSL certificate handling
+
+### CA-signed certificates (Linux / macOS)
+
+On Linux and macOS, the library validates the appliance TLS certificate against the system trust store. If your appliance uses a private CA, import the CA certificate before connecting.
+
+```powershell
+# Add the CA cert to the system trust store (Debian/Ubuntu)
+# sudo cp MyCA.crt /usr/local/share/ca-certificates/
+# sudo update-ca-certificates
+
+# Or add directly to the PowerShell session trust store
+Add-OVApplianceTrustedCertificate -Path "/tmp/MyCA.crt"
+```
+
+### Ignoring certificate errors for testing
+
+<Warning>
+Only use `IgnoreCertErrors` in isolated lab environments. Bypassing certificate validation exposes your session to man-in-the-middle attacks. Never use this in production.
+</Warning>
+
+Some older cmdlet invocations in the library accept `-IgnoreCertErrors` for connectivity testing:
+
+```powershell
+# Lab/test use ONLY
+$ApplianceConnection = Connect-OVMgmt -Hostname "192.168.1.10" -Credential $Credential
+```
+
+For self-signed certificates in a lab, import the appliance certificate into the trust store rather than disabling validation entirely.
+
+## Handling the initial password change
+
+A freshly deployed appliance forces an `Administrator` password change on first login. The library raises a `HPEOneView.Appliance.PasswordChangeRequired` exception that you can catch and handle:
+
+```powershell
+Try {
+
+    $ApplianceConnection = Connect-OVMgmt -Hostname $vm_ipaddr -UserName "Administrator" -Password "admin"
+
+}
+
+Catch [HPEOneView.Appliance.PasswordChangeRequired] {
+
+    Write-Host "Setting initial password"
+
+    Try {
+
+        Set-OVInitialPassword -OldPassword "admin" -NewPassword $NewPassword -Appliance $vm_ipaddr
+
+    }
+
+    Catch {
+
+        $PSCmdlet.ThrowTerminatingError($_)
+
+    }
+
+}
+
+# Reconnect with the new password
+$ApplianceConnection = Connect-OVMgmt -Hostname $vm_ipaddr -UserName Administrator -Password $NewPassword
+```
+
+## Disconnecting cleanly
+
+Always disconnect at the end of a script to release the session token on the appliance.
+
+```powershell
+# Disconnect the default (or only) session
+Disconnect-OVMgmt
+
+# Disconnect a specific session by name
+Disconnect-OVMgmt -ApplianceConnection "hpov2.example.com"
+
+# Disconnect all sessions
+$Global:ConnectedSessions | Disconnect-OVMgmt
+```
+
+<Tip>
+Wrap your entire script in a `try / finally` block and call `Disconnect-OVMgmt` in the `finally` block so sessions are always cleaned up, even when the script exits with an error.
+</Tip>

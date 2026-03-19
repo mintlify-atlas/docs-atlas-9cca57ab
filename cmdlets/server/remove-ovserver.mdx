@@ -1,0 +1,96 @@
+---
+title: "Remove-OVServer"
+description: "Remove a server hardware resource from HPE OneView management."
+---
+
+## Synopsis
+
+Removes one or more server hardware resources from HPE OneView.
+
+## Syntax
+
+```powershell
+Remove-OVServer
+    [-InputObject] <Object>
+    [-Force]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Remove-OVServer` removes the specified server hardware resource from HPE OneView. The server is de-registered from the appliance; the physical hardware is not affected.
+
+Before removing a server, any assigned server profile must be unassigned or deleted. If a profile is still assigned, the operation will fail unless `-Force` is used.
+
+The cmdlet supports pipeline input, so you can pipe the output of `Get-OVServer` directly to `Remove-OVServer` for bulk operations.
+
+<Warning>
+Removing a server from HPE OneView is irreversible. All HPE OneView configuration and monitoring history associated with the server will be deleted. Re-adding the server requires re-importing it with `Add-OVServer`.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The server hardware object, URI string, or name to remove. Accepts pipeline input. The `Server` alias is also accepted.
+</ParamField>
+
+<ParamField path="Force" type="Switch">
+  Force removal even if a server profile is still assigned. The profile assignment will be cleared automatically. Use with caution.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session. Accepted from the pipeline by property name.
+</ParamField>
+
+<ParamField path="Confirm" type="Switch">
+  Prompts for confirmation before each removal. The cmdlet has a high `ConfirmImpact`, so confirmation is requested by default when `$ConfirmPreference` is `High` or lower.
+</ParamField>
+
+## Examples
+
+### Remove a server by name
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 1"
+Remove-OVServer -InputObject $server
+```
+
+Removes the server `Encl1, bay 1` from HPE OneView after confirmation.
+
+### Remove a server using the pipeline
+
+```powershell
+Get-OVServer -Name "Encl1, bay 1" | Remove-OVServer
+```
+
+Pipes the server object directly into `Remove-OVServer`.
+
+### Remove multiple servers without confirmation
+
+```powershell
+Get-OVServer -Name "Encl1*" | Remove-OVServer -Confirm:$false
+```
+
+Removes all servers whose names begin with `Encl1` without prompting for confirmation.
+
+### Force-remove a server that still has a profile assigned
+
+```powershell
+Get-OVServer -Name "dl380-prod-01" | Remove-OVServer -Force
+```
+
+Forces removal even if a server profile is still assigned. The profile assignment is cleared as part of the operation.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+Returns an async task resource for each removal operation.
+
+## Related cmdlets
+
+- [Get-OVServer](/cmdlets/server/get-ovserver)
+- [Add-OVServer](/cmdlets/server/add-ovserver)

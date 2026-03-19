@@ -1,0 +1,76 @@
+---
+title: "Set-OVServerProfile"
+description: "Update an existing server profile's configuration."
+---
+
+## Synopsis
+
+Modifies an existing server profile resource on an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Set-OVServerProfile
+    [-ServerProfile] <Object>
+    [-ApplianceConnection <Object>]
+    [-Async]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVServerProfile` applies modifications to an existing server profile object and saves the updated configuration back to the HPE OneView appliance.
+
+The typical workflow is:
+
+1. Retrieve the profile with `Get-OVServerProfile`.
+2. Modify the returned object's properties directly in PowerShell.
+3. Pass the modified object to `Set-OVServerProfile`.
+
+<Warning>
+`Set-OVServerProfile` sends the entire profile object back to the appliance. Any unsaved changes to sub-resources (connections, storage, etc.) must be reflected in the object before calling this cmdlet, otherwise they will be overwritten.
+</Warning>
+
+## Parameters
+
+<ParamField path="ServerProfile" type="object" required>
+  The server profile object to update, as returned by `Get-OVServerProfile`. Accepts pipeline input.
+</ParamField>
+
+<ParamField path="Async" type="switch">
+  Return a task object immediately without waiting for the update to complete.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="object">
+  Specifies the HPE OneView appliance connection. Defaults to the default connected session. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+### Update a profile description
+
+```powershell
+$profile = Get-OVServerProfile -Name 'Web-Node-01'
+$profile.description = 'Updated description for Web-Node-01'
+Set-OVServerProfile -ServerProfile $profile | Wait-OVTaskComplete
+```
+
+### Update a profile and return immediately
+
+```powershell
+$profile = Get-OVServerProfile -Name 'Web-Node-01'
+$profile.description = 'Async update example'
+$task = Set-OVServerProfile -ServerProfile $profile -Async
+Write-Host "Task URI: $($task.uri)"
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` — An async task object tracking the update operation.
+
+## Related cmdlets
+
+- [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)
+- [New-OVServerProfile](/cmdlets/server-profiles/new-ovserverprofile)
+- [Remove-OVServerProfile](/cmdlets/server-profiles/remove-ovserverprofile)
+- [Update-OVServerProfile](/cmdlets/server-profiles/update-ovserverprofile)

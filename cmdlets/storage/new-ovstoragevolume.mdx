@@ -1,0 +1,243 @@
+---
+title: "New-OVStorageVolume"
+description: "Create a new storage volume on an HPE OneView-managed storage system."
+---
+
+## Synopsis
+
+Creates a new storage volume from a storage pool or volume template.
+
+## Syntax
+
+### From storage pool (default)
+
+```powershell
+New-OVStorageVolume
+    -Name <String>
+    -StoragePool <HPEOneView.Storage.StoragePool>
+    [-Description <String>]
+    [-SnapshotStoragePool <HPEOneView.Storage.StoragePool>]
+    [-StorageSystem <Object>]
+    [-Capacity <Int64>]
+    [-ProvisioningType <String>]
+    [-Full]
+    [-Shared]
+    [-EnableCompression <Bool>]
+    [-EnableDeduplication <Bool>]
+    [-EnableEncryption <Bool>]
+    [-PerformancePolicy <HPEOneView.Storage.PerformancePolicy>]
+    [-VolumeSet <HPEOneView.Storage.VolumeSet>]
+    [-Folder <HPEOneView.Storage.NimbleFolder>]
+    [-EnableIOPSLimit <Bool>]
+    [-IOPSLimit <Int>]
+    [-EnableDataTransferLimit <Bool>]
+    [-DataTransferLimit <Int>]
+    [-CachePinning <Bool>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### From volume template
+
+```powershell
+New-OVStorageVolume
+    -Name <String>
+    -VolumeTemplate <Object>
+    [-Description <String>]
+    [-SnapshotStoragePool <HPEOneView.Storage.StoragePool>]
+    [-Capacity <Int64>]
+    [-ProvisioningType <String>]
+    [-Full]
+    [-Shared]
+    [-EnableCompression <Bool>]
+    [-EnableDeduplication <Bool>]
+    [-EnableEncryption <Bool>]
+    [-PerformancePolicy <HPEOneView.Storage.PerformancePolicy>]
+    [-VolumeSet <HPEOneView.Storage.VolumeSet>]
+    [-Folder <HPEOneView.Storage.NimbleFolder>]
+    [-EnableIOPSLimit <Bool>]
+    [-IOPSLimit <Int>]
+    [-EnableDataTransferLimit <Bool>]
+    [-DataTransferLimit <Int>]
+    [-CachePinning <Bool>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVStorageVolume` creates a storage volume on an HPE OneView-managed array. You can provision a volume directly from a storage pool (CPG) or from a volume template that enforces organizational standards.
+
+Specify `-Capacity` in gibibytes (GiB). If `-Capacity` is omitted, the value from the volume template or the storage system default is used.
+
+Use `-ProvisioningType Thin` for thin provisioning (deduplication-supported TPVV), `Full` for thick/fully-allocated provisioning, or `TPDD` for thin provisioning with deduplication and compression (Adaptive Optimization). Use the `-Full` switch as a shorthand for full provisioning.
+
+For shared volumes that need to be attached to multiple server profiles simultaneously, add the `-Shared` switch.
+
+The cmdlet returns an async task when the storage system accepts the request. Pipe to `Wait-OVTaskComplete` if you need synchronous behavior, or use `-Async` to immediately return the task object.
+
+<Note>
+If the appliance has a mandatory volume template policy enabled (`Set-OVStorageVolumeTemplatePolicy`), you must use the `-VolumeTemplate` parameter set. Providing only a storage pool will fail.
+</Note>
+
+## Parameters
+
+<ParamField path="Name" type="String" required>
+  Display name for the new volume. Aliased as `VolumeName`.
+</ParamField>
+
+<ParamField path="StoragePool" type="HPEOneView.Storage.StoragePool" required>
+  The storage pool (CPG) on which to create the volume. Accepts pipeline input from `Get-OVStoragePool`. Aliased as `pool` and `poolName`.
+</ParamField>
+
+<ParamField path="VolumeTemplate" type="Object" required>
+  Volume template to use when creating the volume (template parameter set). Accepts an `HPEOneView.Storage.VolumeTemplate` object or a template name string. Aliased as `template` and `svt`.
+</ParamField>
+
+<ParamField path="Description" type="String">
+  Optional description for the volume.
+</ParamField>
+
+<ParamField path="SnapshotStoragePool" type="HPEOneView.Storage.StoragePool">
+  Storage pool to use for snapshots of this volume. Defaults to the same pool as the volume if not specified.
+</ParamField>
+
+<ParamField path="StorageSystem" type="Object">
+  Storage system to use when the pool name is ambiguous across multiple systems.
+</ParamField>
+
+<ParamField path="Capacity" type="Int64">
+  Volume size in gibibytes (GiB). Must be at least 1 GiB. Aliased as `size`.
+</ParamField>
+
+<ParamField path="ProvisioningType" type="String">
+  Provisioning type for the volume. Accepted values: `Thin`, `Full`, `TPDD`. Aliased as `ProvisionType`.
+</ParamField>
+
+<ParamField path="Full" type="SwitchParameter">
+  Shorthand switch to request full (thick) provisioning. Equivalent to `-ProvisioningType Full`.
+</ParamField>
+
+<ParamField path="Shared" type="SwitchParameter">
+  Marks the volume as shareable, allowing it to be attached to multiple server profiles simultaneously.
+</ParamField>
+
+<ParamField path="EnableCompression" type="Bool">
+  Enables inline compression on the volume. Supported on Primera and Alletra systems.
+</ParamField>
+
+<ParamField path="EnableDeduplication" type="Bool">
+  Enables inline deduplication on the volume. Supported on Primera and Alletra systems.
+</ParamField>
+
+<ParamField path="EnableEncryption" type="Bool">
+  Enables volume-level encryption. Requires the storage system to support this feature.
+</ParamField>
+
+<ParamField path="PerformancePolicy" type="HPEOneView.Storage.PerformancePolicy">
+  Performance policy to assign to the volume. Use `Get-OVStorageSystem` to retrieve available performance policies.
+</ParamField>
+
+<ParamField path="VolumeSet" type="HPEOneView.Storage.VolumeSet">
+  Volume set (consistency group) to add the volume to.
+</ParamField>
+
+<ParamField path="EnableIOPSLimit" type="Bool">
+  Enables an IOPS limit on the volume.
+</ParamField>
+
+<ParamField path="IOPSLimit" type="Int" default="256">
+  Maximum IOPS for the volume when `-EnableIOPSLimit` is `$true`. Valid range: 256–4,294,967,295.
+</ParamField>
+
+<ParamField path="EnableDataTransferLimit" type="Bool">
+  Enables a data transfer throughput limit on the volume.
+</ParamField>
+
+<ParamField path="DataTransferLimit" type="Int">
+  Maximum data transfer rate (MB/s) when `-EnableDataTransferLimit` is `$true`.
+</ParamField>
+
+<ParamField path="CachePinning" type="Bool">
+  Pins the volume in the storage system cache for maximum performance.
+</ParamField>
+
+<ParamField path="Folder" type="HPEOneView.Storage.NimbleFolder">
+  Nimble Storage folder to place the volume in.
+</ParamField>
+
+<ParamField path="Scope" type="HPEOneView.Appliance.ScopeCollection[]">
+  Assigns the volume to one or more HPE OneView scopes at creation time.
+</ParamField>
+
+<ParamField path="Async" type="SwitchParameter">
+  Returns the task object immediately without waiting for the operation to complete.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  HPE OneView appliance connection. Defaults to the default connected session. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### Create 10 thin-provisioned volumes in a loop
+
+```powershell
+$StoragePool1 = Get-OVStoragePool -Name FST_CPG1
+
+1..10 | ForEach-Object {
+    New-OVStorageVolume -Name "Vol$_" -StoragePool $StoragePool1 -Capacity 60
+}
+```
+
+Creates `Vol1` through `Vol10`, each 60 GiB, using the default provisioning type of the storage pool.
+
+### Create shared volumes
+
+```powershell
+1..5 | ForEach-Object {
+    New-OVStorageVolume -Name "SharedVol$_" -StoragePool FST_CPG2 -Capacity 250 -Shared
+}
+```
+
+Creates five 250 GiB shared volumes that can each be attached to multiple server profiles.
+
+### Create a thin-provisioned volume with snapshot pool
+
+```powershell
+$dataPool = Get-OVStoragePool -Name "FST_CPG1" -StorageSystem "HP3Par_1"
+$snapPool = Get-OVStoragePool -Name "FST_CPG2" -StorageSystem "HP3Par_1"
+
+New-OVStorageVolume `
+    -Name "AppData-Vol1" `
+    -StoragePool $dataPool `
+    -SnapshotStoragePool $snapPool `
+    -Capacity 500 `
+    -ProvisioningType Thin
+```
+
+### Create a volume from a template
+
+```powershell
+$svt = Get-OVStorageVolumeTemplate -Name "Gold-Tier-Template"
+
+New-OVStorageVolume -Name "DB-Vol-01" -VolumeTemplate $svt -Capacity 1024
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+An asynchronous task object. Pipe to `Wait-OVTaskComplete` to block until the volume is created.
+
+## Related cmdlets
+
+- [Get-OVStoragePool](/cmdlets/storage/get-ovstoragepool)
+- [Get-OVStorageVolume](/cmdlets/storage/get-ovstoragevolume)
+- [Set-OVStorageVolume](/cmdlets/storage/set-ovstoragevolume)
+- [Remove-OVStorageVolume](/cmdlets/storage/remove-ovstoragevolume)
+- [Get-OVStorageVolumeTemplate](/cmdlets/storage/get-ovstoragevolumetemplate)

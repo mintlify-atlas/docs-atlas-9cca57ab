@@ -1,0 +1,143 @@
+---
+title: "Install-OVUpdate"
+description: "Upload and install a pending HPE OneView appliance software update."
+---
+
+## Synopsis
+
+Uploads, stages, or installs an HPE OneView appliance software update package.
+
+## Syntax
+
+```powershell
+# Upload and install immediately
+Install-OVUpdate
+    -File <String>
+    [-Eula <String>]
+    [-DisplayReleaseNotes]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+
+# Stage the update without installing
+Install-OVUpdate
+    -File <String>
+    -Stage
+    [-DisplayReleaseNotes]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+
+# Install a previously staged update
+Install-OVUpdate
+    -InstallNow
+    [-Eula <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+
+# List a pending staged update
+Install-OVUpdate
+    -ListPending
+    [-DisplayReleaseNotes]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Install-OVUpdate` manages the lifecycle of an HPE OneView appliance software update. It can upload and immediately apply an update package, stage an update for later installation, install a previously staged update, or list details about a pending staged update.
+
+This cmdlet applies to the HPE OneView management appliance software itself — not to the firmware on managed servers or enclosures.
+
+<Warning>
+  Installing an appliance update requires a **full appliance restart**. All active user sessions will be disconnected and the appliance will be unavailable for several minutes during the update process. Plan maintenance windows accordingly and warn all connected users before proceeding.
+</Warning>
+
+## Parameters
+
+<ParamField path="File" type="String" required>
+  Path to the HPE OneView appliance update file (`.bin` package) to upload. The file must exist on the local filesystem.
+
+  Aliases: `f`
+</ParamField>
+
+<ParamField path="Eula" type="String">
+  The EULA acceptance string required to proceed with the update. Obtain the exact string from the release notes or by running `Install-OVUpdate -ListPending -DisplayReleaseNotes` and reviewing the embedded EULA text.
+</ParamField>
+
+<ParamField path="DisplayReleaseNotes" type="SwitchParameter">
+  Displays the release notes for the update. Can be used with the `Update`, `Stage`, and `List` parameter sets.
+</ParamField>
+
+<ParamField path="Stage" type="SwitchParameter" required>
+  Upload the update file to the appliance without installing it. The update can be installed later using `-InstallNow`. Required when using the **Stage** parameter set.
+</ParamField>
+
+<ParamField path="InstallNow" type="SwitchParameter" required>
+  Install a previously staged update. A staged update must already exist (see `Get-OVPendingUpdate`). Required when using the **StageInstall** parameter set.
+</ParamField>
+
+<ParamField path="ListPending" type="SwitchParameter" required>
+  Display information about a currently staged pending update without taking any action. Required when using the **List** parameter set.
+
+  Aliases: `list`
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specify one or more appliance connection objects or hostnames. Defaults to the default connected appliance (`$Global:ConnectedSessions | Where-Object Default`).
+
+  Aliases: `Appliance`
+</ParamField>
+
+## Examples
+
+### Upload and immediately install an update
+
+```powershell
+Install-OVUpdate -File "C:\updates\OneView_10.10.00_update.bin" -Eula "accept"
+```
+
+Uploads the update package and immediately applies it. The appliance restarts automatically.
+
+### Stage an update for later installation
+
+```powershell
+Install-OVUpdate -File "C:\updates\OneView_10.10.00_update.bin" -Stage
+```
+
+Uploads the update to the appliance without installing it. The update can be installed later during a maintenance window.
+
+### View a staged update before installing
+
+```powershell
+Install-OVUpdate -ListPending -DisplayReleaseNotes
+```
+
+Displays information about the staged update including the release notes. No changes are made.
+
+### Install a previously staged update
+
+```powershell
+Get-OVPendingUpdate
+Install-OVUpdate -InstallNow -Eula "accept"
+```
+
+First confirms a staged update exists, then applies it. The appliance restarts during the process.
+
+### Display release notes for an update file
+
+```powershell
+Install-OVUpdate -File "C:\updates\OneView_10.10.00_update.bin" -Stage -DisplayReleaseNotes
+```
+
+Stages the update and also displays the embedded release notes.
+
+## Output
+
+None on success. The appliance restarts as part of the installation process, dropping the active session.
+
+After the appliance comes back online, reconnect with `Connect-OVMgmt` and verify the version with `Get-OVVersion`.
+
+## Related cmdlets
+
+- [Get-OVPendingUpdate](/cmdlets/firmware/get-ovpendingupdate)
+- [Get-OVVersion](/cmdlets/appliance/get-ovversion)
+- [Connect-OVMgmt](/cmdlets/connection/connect-ovmgmt)

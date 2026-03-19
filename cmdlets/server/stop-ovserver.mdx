@@ -1,0 +1,119 @@
+---
+title: "Stop-OVServer"
+description: "Power off a server hardware resource managed by HPE OneView."
+---
+
+## Synopsis
+
+Powers off a server hardware resource.
+
+## Syntax
+
+**Graceful power-off (default)**
+
+```powershell
+Stop-OVServer
+    [-InputObject] <Object>
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+**Forced power-off**
+
+```powershell
+Stop-OVServer
+    [-InputObject] <Object>
+    -Force
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Stop-OVServer` sends a power-off signal to the specified server hardware via the iLO management processor. The default behaviour is a graceful momentary press of the power button, which requests the OS to shut down cleanly.
+
+Use `-Force` to immediately cut power (press-and-hold) without waiting for the OS to shut down.
+
+The cmdlet accepts server hardware objects or server profile objects from the pipeline.
+
+<Warning>
+Using `-Force` immediately cuts power to the server without a graceful OS shutdown. This can result in data loss or file system corruption if the operating system is running.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The server hardware or server profile object to power off. Accepts pipeline input. The `Server` alias is also accepted.
+</ParamField>
+
+<ParamField path="Force" type="Switch">
+  Force an immediate power-off using a press-and-hold action. When specified, this parameter set is activated and the cmdlet requires confirmation.
+</ParamField>
+
+<ParamField path="Async" type="Switch">
+  Return the async task object immediately without waiting for the operation to complete.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session. Accepted from the pipeline by property name.
+</ParamField>
+
+<ParamField path="Confirm" type="Switch">
+  Prompts for confirmation before powering off the server.
+</ParamField>
+
+## Examples
+
+### Graceful power-off
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 1"
+Stop-OVServer -InputObject $server
+```
+
+Sends a graceful power-off signal to `Encl1, bay 1` and waits for the operation to complete.
+
+### Power off using the pipeline
+
+```powershell
+Get-OVServer -Name "Encl1, bay 1" | Stop-OVServer
+```
+
+Pipes the server object directly to `Stop-OVServer`.
+
+### Forced power-off
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 1"
+Stop-OVServer -InputObject $server -Force
+```
+
+Cuts power immediately without waiting for the OS to shut down.
+
+### Power off all servers in an enclosure
+
+```powershell
+$tasks = Get-OVServer -Name "Encl1*" | Stop-OVServer -Async -Confirm:$false
+$tasks | Wait-OVTaskComplete
+```
+
+Powers off all servers in `Encl1` without confirmation prompts, submitting each as an async task.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+Returns an async task resource for the power-off operation.
+
+## Related cmdlets
+
+- [Start-OVServer](/cmdlets/server/start-ovserver)
+- [Restart-OVServer](/cmdlets/server/restart-ovserver)
+- [Get-OVServer](/cmdlets/server/get-ovserver)
+- [Set-OVServerPower](/cmdlets/server/set-ovserverpower)

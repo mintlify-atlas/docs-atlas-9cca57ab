@@ -1,0 +1,115 @@
+---
+title: "Set-OVStorageVolume"
+description: "Modify an existing storage volume managed by HPE OneView, including expanding capacity and changing sharing or snapshot settings."
+---
+
+## Synopsis
+
+Modifies the properties of an existing HPE OneView storage volume.
+
+## Syntax
+
+```powershell
+Set-OVStorageVolume
+    -InputObject <Object>
+    [-Name <String>]
+    [-Description <String>]
+    [-Capacity <Int64>]
+    [-SnapShotStoragePool <Object>]
+    [-PermitAdaptiveOptimization <Bool>]
+    [-Shared <Bool>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVStorageVolume` updates the configuration of a storage volume that is already managed by HPE OneView. Pass the volume object from `Get-OVStorageVolume` via the pipeline or `-InputObject`.
+
+Capacity can only be **increased** — storage arrays do not support online shrinking of volumes. Attempting to specify a capacity smaller than the current size will produce an error.
+
+Changing `-Shared` from `$true` to `$false` is only permitted when the volume is not attached to more than one server profile.
+
+<Warning>
+Expanding a volume is an irreversible operation. The storage array will immediately allocate (for fully-provisioned volumes) or reserve (for thin-provisioned volumes) the additional space. Verify your target capacity before executing.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The storage volume object to modify. Accepts pipeline input from `Get-OVStorageVolume`. Aliased as `SourceVolume`.
+</ParamField>
+
+<ParamField path="Name" type="String">
+  New display name for the volume. Aliased as `VolumeName`.
+</ParamField>
+
+<ParamField path="Description" type="String">
+  New description for the volume.
+</ParamField>
+
+<ParamField path="Capacity" type="Int64">
+  New capacity in gibibytes (GiB). Must be greater than the current capacity. Aliased as `size`.
+</ParamField>
+
+<ParamField path="SnapShotStoragePool" type="Object">
+  Storage pool to use for volume snapshots. Accepts an `HPEOneView.Storage.StoragePool` object or a pool name string.
+</ParamField>
+
+<ParamField path="PermitAdaptiveOptimization" type="Bool">
+  Enables or disables Adaptive Optimization (AO) on 3PAR/Primera volumes. When `$true`, the array may relocate data between tiers based on access patterns.
+</ParamField>
+
+<ParamField path="Shared" type="Bool">
+  Sets whether the volume is shareable (`$true`) or private (`$false`). Setting to `$false` requires that the volume is currently attached to no more than one server profile.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  HPE OneView appliance connection. Defaults to the default connected session. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### Expand a volume's capacity
+
+```powershell
+# Get the current volume
+$vol = Get-OVStorageVolume -Name "AppData-Vol1"
+
+# Expand from current size to 1 TiB
+Set-OVStorageVolume -InputObject $vol -Capacity 1024
+```
+
+### Rename a volume and update its description
+
+```powershell
+Get-OVStorageVolume -Name "Vol1" | Set-OVStorageVolume -Name "Production-Vol1" -Description "Primary application data volume"
+```
+
+### Make a private volume shareable
+
+```powershell
+Get-OVStorageVolume -Name "AppData-Vol1" | Set-OVStorageVolume -Shared $true
+```
+
+### Update the snapshot storage pool
+
+```powershell
+$vol      = Get-OVStorageVolume -Name "DB-Vol-01"
+$snapPool = Get-OVStoragePool -Name "FST_CPG2"
+
+Set-OVStorageVolume -InputObject $vol -SnapShotStoragePool $snapPool
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+An asynchronous task that tracks the update operation on the storage system. Pipe to `Wait-OVTaskComplete` if you need the task to finish before proceeding.
+
+## Related cmdlets
+
+- [Get-OVStorageVolume](/cmdlets/storage/get-ovstoragevolume)
+- [New-OVStorageVolume](/cmdlets/storage/new-ovstoragevolume)
+- [Remove-OVStorageVolume](/cmdlets/storage/remove-ovstoragevolume)
+- [Get-OVStoragePool](/cmdlets/storage/get-ovstoragepool)

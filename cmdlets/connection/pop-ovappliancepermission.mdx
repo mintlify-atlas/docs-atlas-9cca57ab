@@ -1,0 +1,80 @@
+---
+title: "Pop-OVAppliancePermission"
+description: "Restore all permissions to active on an appliance session after a least-privilege Push-OVAppliancePermission operation."
+---
+
+## Synopsis
+
+Re-activate all available permissions on the current appliance session, reversing the effect of a previous `Push-OVAppliancePermission` call.
+
+## Syntax
+
+```powershell
+Pop-OVAppliancePermission
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Pop-OVAppliancePermission` restores full permissions to an appliance session that was previously restricted by `Push-OVAppliancePermission`. It posts all permissions currently associated with the connection (both active and inactive) back to the appliance session endpoint, activating each one.
+
+Internally the cmdlet:
+
+1. Collects every permission in `ApplianceConnection.ActivePermissions` (including those currently set inactive).
+2. Posts a session-update request to the appliance with all permissions included.
+3. Updates the `SessionID` on the `HPEOneView.Appliance.Connection` object in `$ConnectedSessions`.
+4. Marks all permissions as active on the local connection object.
+
+This cmdlet complements `Push-OVAppliancePermission` and together they enable a least-privilege workflow: push to a reduced scope for a task, then pop to restore full access.
+
+## Parameters
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection on which to restore permissions. Accepts an `HPEOneView.Appliance.Connection` object or name string. Accepts pipeline input by property name and the alias `Appliance`.
+
+  Defaults to the current default connection (`$ConnectedSessions | Where-Object Default`) when not specified.
+</ParamField>
+
+## Return value
+
+Returns the `ActivePermissions` collection of the updated `HPEOneView.Appliance.Connection` object, with all permissions marked as active.
+
+## Examples
+
+### Example 1: Restore permissions after a least-privilege task
+
+```powershell
+# Narrow permissions for a scoped task
+$scopedPerm = ($ConnectedSessions | Where-Object Default).ActivePermissions |
+    Where-Object { $_.RoleName -eq 'Server administrator' -and $_.ScopeName -eq 'Datacenter-A' }
+
+Push-OVAppliancePermission -SetActivePermissions $scopedPerm
+
+# Perform the restricted task ...
+Get-OVServer -ApplianceConnection (Get-OVApplianceConnection)
+
+# Restore all permissions
+Pop-OVAppliancePermission
+```
+
+### Example 2: Restore permissions on a specific non-default connection
+
+```powershell
+$conn = $ConnectedSessions | Where-Object Name -eq 'ov2.example.com'
+
+# Assume Push was already called on $conn
+Pop-OVAppliancePermission -ApplianceConnection $conn
+```
+
+### Example 3: Inspect restored permissions
+
+```powershell
+$restoredPerms = Pop-OVAppliancePermission
+$restoredPerms | Format-Table RoleName, ScopeName, Active
+```
+
+## Related cmdlets
+
+- [Push-OVAppliancePermission](./push-ovappliancepermission)
+- [Connect-OVMgmt](./connect-ovmgmt)

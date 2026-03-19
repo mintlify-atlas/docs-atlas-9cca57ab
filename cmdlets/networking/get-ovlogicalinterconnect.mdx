@@ -1,0 +1,99 @@
+---
+title: "Get-OVLogicalInterconnect"
+description: "Retrieve logical interconnect resources from the HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves one or more logical interconnect resources from the connected HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVLogicalInterconnect
+    [-Name <String>]
+    [-NonCompliant]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-Export <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVLogicalInterconnect` retrieves logical interconnect (LI) resources from HPE OneView. A logical interconnect represents the configured state of the interconnect modules installed in one or more enclosure bays. It is created automatically when an enclosure is added to an enclosure group that references a Logical Interconnect Group (LIG).
+
+The logical interconnect tracks whether its current configuration matches the governing LIG. Use the `-NonCompliant` switch to identify logical interconnects that have drifted from their LIG template.
+
+Logical interconnect objects are used as input to `New-OVUplinkSet` and other networking cmdlets.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name of the logical interconnect to retrieve. When omitted, all logical interconnects are returned.
+</ParamField>
+
+<ParamField path="NonCompliant" type="Switch">
+  Return only logical interconnects whose current configuration does not match their governing Logical Interconnect Group.
+</ParamField>
+
+<ParamField path="Label" type="String">
+  Filter results by a resource label assigned to the logical interconnect.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Filter results to resources that belong to the specified scope. Defaults to `AllResourcesInScope`.
+</ParamField>
+
+<ParamField path="Export" type="String">
+  Path to a JSON file where the retrieved logical interconnect objects will be exported.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Return all logical interconnects
+
+```powershell
+Get-OVLogicalInterconnect
+```
+
+### Return a specific logical interconnect by name
+
+```powershell
+Get-OVLogicalInterconnect -Name "Enclosure1-LIG"
+```
+
+### Find logical interconnects that are out of compliance
+
+```powershell
+Get-OVLogicalInterconnect -NonCompliant
+```
+
+### Get a logical interconnect and pipe it to New-OVUplinkSet
+
+```powershell
+$li = Get-OVLogicalInterconnect -Name "Enclosure1-LIG"
+$li | New-OVUplinkSet -Name "Uplink-Eth" -Type Ethernet -Networks $nets -UplinkPorts "BAY1:X4","BAY1:X5"
+```
+
+### Export logical interconnect data to a file
+
+```powershell
+Get-OVLogicalInterconnect -Export "C:\Reports\logical-interconnects.json"
+```
+
+## Output
+
+`HPEOneView.Networking.LogicalInterconnect` objects.
+
+## Related cmdlets
+
+- [Get-OVLogicalInterconnectGroup](/cmdlets/networking/get-ovlogicalinterconnectgroup)
+- [New-OVLogicalInterconnectGroup](/cmdlets/networking/new-ovlogicalinterconnectgroup)
+- [Get-OVUplinkSet](/cmdlets/networking/get-ovuplinkset)
+- [New-OVUplinkSet](/cmdlets/networking/new-ovuplinkset)

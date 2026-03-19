@@ -1,0 +1,84 @@
+---
+title: "Get-OVSMTPConfig"
+description: "Retrieve the SMTP email notification configuration from one or more HPE OneView appliances."
+---
+
+## Synopsis
+
+Get the current SMTP server and email alert configuration from an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVSMTPConfig
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVSMTPConfig` retrieves the SMTP email notification settings configured on the appliance. The returned object contains the mail server hostname, port, connection security mode, sender address, and the current state of alert email notifications.
+
+This cmdlet is typically used to review the current settings before making changes with `Set-OVSmtpConfig`, or to confirm that email alerting is enabled after configuration.
+
+## Parameters
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Retrieve the SMTP configuration from the default appliance
+
+```powershell
+Get-OVSMTPConfig
+```
+
+### Retrieve SMTP configuration from a named appliance connection
+
+```powershell
+Get-OVSMTPConfig -ApplianceConnection 'MyAppliance.domain.com'
+```
+
+### Check whether alert email notifications are enabled
+
+```powershell
+$smtp = Get-OVSMTPConfig
+if ($smtp.alertEmailEnabled)
+{
+    Write-Host "Email alerting is enabled. Server: $($smtp.smtpServer)"
+}
+else
+{
+    Write-Warning "Email alerting is disabled."
+}
+```
+
+### Retrieve SMTP config from multiple appliances
+
+```powershell
+$ConnectedSessions | Get-OVSMTPConfig
+```
+
+## Output
+
+`HPEOneview.Appliance.SmtpConfiguration`
+
+Key properties of the returned object:
+
+| Property | Type | Description |
+|---|---|---|
+| `smtpServer` | String | Hostname or IP address of the SMTP server |
+| `smtpPort` | Int | TCP port used for SMTP connections |
+| `smtpProtocol` | String | Connection security mode (None, TLS, StartTls) |
+| `senderEmailAddress` | String | From address used for outbound alert emails |
+| `alertEmailEnabled` | Boolean | Whether email alerting is globally enabled |
+| `alertEmailFilters` | Array | List of defined email alert filter rules |
+| `ApplianceConnection` | Object | Appliance the configuration was retrieved from |
+
+## Related cmdlets
+
+- [Set-OVSmtpConfig](/cmdlets/alerts/set-ovsmtpconfig)
+- [Get-OVSmtpAlertEmailFilter](/cmdlets/alerts/get-ovsmtpalertemailfilter)
+- [Add-OVSmtpAlertEmailFilter](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage

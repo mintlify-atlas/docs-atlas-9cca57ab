@@ -1,0 +1,127 @@
+---
+title: "Wait-OVTaskComplete"
+description: "Block script execution until one or more HPE OneView asynchronous tasks reach a terminal state."
+---
+
+## Synopsis
+
+Wait for one or more HPE OneView task resources to finish before continuing script execution.
+
+## Syntax
+
+```powershell
+Wait-OVTaskComplete
+    -InputObject <Object>
+    [-Timeout <TimeSpan>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Wait-OVTaskComplete` polls the HPE OneView appliance until every supplied task reaches a terminal state — `Completed`, `Error`, `Warning`, `Terminated`, or `Killed` — or until the timeout expires.
+
+Progress bars are displayed for each tracked task. If `-Verbose` is set, `Write-Progress` output is suppressed and status is written to the verbose stream instead.
+
+When the timeout is reached before all tasks finish, the cmdlet throws a terminating error and returns whatever tasks have already completed.
+
+This cmdlet is used in two main patterns:
+
+1. **Inline (default):** Most resource-modifying cmdlets complete synchronously because they call `Wait-OVTaskComplete` internally.
+2. **`-Async` pattern:** Pass `-Async` to the source cmdlet to get the task object immediately, then pipe to `Wait-OVTaskComplete` to control when your script blocks.
+
+Multiple task objects (e.g., from an array or pipeline) are tracked concurrently with separate progress bars.
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+One or more task objects or task URI strings to monitor. Accepts:
+- An `HPEOneview.Appliance.TaskResource` object
+- A task URI string starting with `/rest/tasks/`
+- An array or pipeline of either
+
+Aliases: `-TaskUri`, `-Task`
+</ParamField>
+
+<ParamField path="Timeout" type="TimeSpan">
+Maximum time to wait before raising a timeout error. Defaults to the library-wide `$DefaultTimeout` value (approximately 20 minutes).
+
+Example: `-Timeout (New-TimeSpan -Minutes 30)`
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Wait for a single async task
+
+```powershell
+# Use -Async so the cmdlet returns a task object immediately
+$task = Set-OVRemoteSupport -CompanyName 'Acme Corp' -AutoEnableDevices $true -Async
+
+# Block here until the task completes
+$task | Wait-OVTaskComplete
+```
+
+### Enable Remote Support on multiple servers asynchronously
+
+```powershell
+# Launch all operations simultaneously, collecting task objects
+$tasks = Get-OVServer | ForEach-Object {
+    Enable-OVRemoteSupport -InputObject $_ -Async
+}
+
+# Wait for all tasks to finish
+$tasks | Wait-OVTaskComplete
+```
+
+### Specify a custom timeout
+
+```powershell
+$task = Add-OVServer -Hostname 'ilo.server.example.com' -Credential $cred -Async
+$task | Wait-OVTaskComplete -Timeout (New-TimeSpan -Minutes 45)
+```
+
+### Capture the completed task result for error checking
+
+```powershell
+$task = Update-OVServerProfile -InputObject $profile -Async
+$result = $task | Wait-OVTaskComplete
+
+if ($result.taskState -eq 'Error')
+{
+    Write-Error "Profile update failed: $($result.taskStatus)"
+}
+```
+
+### The -Async pattern explained
+
+```powershell
+# Without -Async: the cmdlet blocks until the task completes
+Set-OVRemoteSupport -CompanyName 'Acme Corp'
+
+# With -Async: the cmdlet returns immediately with a task object
+$task = Set-OVRemoteSupport -CompanyName 'Acme Corp' -Async
+# ... do other work here ...
+$task | Wait-OVTaskComplete   # block at this point
+```
+
+## Output
+
+`HPEOneview.Appliance.TaskResource`
+
+The completed (or timed-out) task object is returned. Key properties:
+
+| Property | Type | Description |
+|---|---|---|
+| `taskState` | String | Final execution state (Completed, Error, etc.) |
+| `taskStatus` | String | Human-readable status or error message |
+| `percentComplete` | Int | Should be 100 on successful completion |
+| `modified` | DateTime | Timestamp of the last state change |
+
+## Related cmdlets
+
+- [Get-OVTask](/cmdlets/alerts/get-ovtask)
+- [Stop-OVTask](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage

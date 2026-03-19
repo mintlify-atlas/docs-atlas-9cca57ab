@@ -1,0 +1,83 @@
+---
+title: "Disconnect-OVMgmt"
+description: "Terminate one or more authenticated sessions to HPE OneView appliances."
+---
+
+## Synopsis
+
+Log off from one or more HPE OneView appliances and remove the corresponding entries from `$ConnectedSessions`.
+
+## Syntax
+
+```powershell
+Disconnect-OVMgmt
+    [[-ApplianceConnection] <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Disconnect-OVMgmt` sends a `DELETE` request to the appliance session endpoint for each specified connection, invalidating the session token server-side, and then removes the connection from the `$Global:ConnectedSessions` tracker.
+
+When called without arguments the cmdlet disconnects the current default connection. You can also pass:
+
+- A connection **object** (e.g. from `$ConnectedSessions`) directly or through the pipeline.
+- A **hostname string** to look up and disconnect a named connection.
+- A **connection ID integer** to target a specific connection by its numeric ID.
+
+After the operation, if only one connection remains in `$ConnectedSessions` and no default is marked, that remaining connection is automatically promoted to the default.
+
+The cmdlet returns the updated `$ConnectedSessions` collection after all requested disconnections have been processed.
+
+## Parameters
+
+<ParamField path="ApplianceConnection" type="Object">
+  The connection(s) to disconnect. Accepts an `HPEOneView.Appliance.Connection` object, a hostname string, or a connection ID integer. Accepts pipeline input and the aliases `Appliance`, `ApplianceSession`, and `Hostname`.
+
+  Defaults to the current default connection (`$ConnectedSessions | Where-Object Default`) when not specified.
+</ParamField>
+
+## Return value
+
+Returns the updated `$Global:ConnectedSessions` collection after all specified connections have been removed.
+
+## Examples
+
+### Example 1: Disconnect the default appliance
+
+```powershell
+Disconnect-OVMgmt
+```
+
+### Example 2: Disconnect a specific appliance by hostname
+
+```powershell
+Disconnect-OVMgmt -ApplianceConnection ov2.example.com
+```
+
+### Example 3: Disconnect all connected appliances
+
+```powershell
+# Pipe the entire ConnectedSessions collection
+$ConnectedSessions | Disconnect-OVMgmt
+```
+
+### Example 4: Disconnect by connection ID
+
+```powershell
+# Connection IDs are visible in $ConnectedSessions.ConnectionId
+Disconnect-OVMgmt -ApplianceConnection 2
+```
+
+### Example 5: Disconnect a connection stored in a variable
+
+```powershell
+$conn = Connect-OVMgmt -Hostname ov1.example.com -Credential (Get-Credential)
+# ... do work ...
+Disconnect-OVMgmt -ApplianceConnection $conn
+```
+
+## Related cmdlets
+
+- [Connect-OVMgmt](./connect-ovmgmt)
+- [Set-OVApplianceDefaultConnection](./set-ovappliancedefaultconnection)

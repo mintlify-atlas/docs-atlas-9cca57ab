@@ -1,0 +1,90 @@
+---
+title: "Start-OVServer"
+description: "Power on a server hardware resource managed by HPE OneView."
+---
+
+## Synopsis
+
+Powers on a server hardware resource.
+
+## Syntax
+
+```powershell
+Start-OVServer
+    [-InputObject] <Object>
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Start-OVServer` sends a momentary power-on signal to the specified server hardware via the iLO management processor. It is equivalent to calling the deprecated `Set-OVServerPower -State On -powerControl MomentaryPress`.
+
+The cmdlet accepts server hardware objects or server profile objects. When a server profile is provided, the underlying server hardware is powered on.
+
+If the server is already powered on, the operation is a no-op and the task completes successfully.
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The server hardware or server profile object to power on. Accepts pipeline input. The `Server` alias is also accepted.
+</ParamField>
+
+<ParamField path="Async" type="Switch">
+  Return the async task object immediately without waiting for the operation to complete. Use `Wait-OVTaskComplete` to monitor the task.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session. Accepted from the pipeline by property name.
+</ParamField>
+
+## Examples
+
+### Power on a server by name
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 1"
+Start-OVServer -InputObject $server
+```
+
+Powers on `Encl1, bay 1` and waits for the task to complete.
+
+### Power on using the pipeline
+
+```powershell
+Get-OVServer -Name "Encl1, bay 1" | Start-OVServer
+```
+
+Pipes the server object directly to `Start-OVServer`.
+
+### Power on all servers in an enclosure asynchronously
+
+```powershell
+$tasks = Get-OVServer -Name "Encl1*" | Start-OVServer -Async
+$tasks | Wait-OVTaskComplete
+```
+
+Powers on all servers whose names begin with `Encl1`, submitting each as an async task and waiting for them all to finish.
+
+### Power on a server from its profile
+
+```powershell
+$profile = Get-OVServerProfile -Name "Web-01"
+Start-OVServer -InputObject $profile
+```
+
+Retrieves the server profile `Web-01` and powers on the underlying server hardware.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+Returns an async task resource for the power-on operation.
+
+## Related cmdlets
+
+- [Stop-OVServer](/cmdlets/server/stop-ovserver)
+- [Restart-OVServer](/cmdlets/server/restart-ovserver)
+- [Get-OVServer](/cmdlets/server/get-ovserver)
+- [Set-OVServerPower](/cmdlets/server/set-ovserverpower)

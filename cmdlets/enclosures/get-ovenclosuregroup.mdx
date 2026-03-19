@@ -1,0 +1,114 @@
+---
+title: "Get-OVEnclosureGroup"
+description: "Retrieve enclosure group objects that define the logical configuration template for enclosures."
+---
+
+## Synopsis
+
+Retrieve one or more enclosure group objects from the HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVEnclosureGroup
+    [-Name <String>]
+    [-Export <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVEnclosureGroup` retrieves enclosure group resource objects from HPE OneView. An enclosure group is a logical configuration template that defines the interconnect bay layout and Logical Interconnect Group (LIG) mappings for a set of enclosures of the same type.
+
+Enclosure groups are used when:
+
+- Adding a c-Class enclosure to managed mode with `Add-OVEnclosure`.
+- Creating a logical enclosure for HPE Synergy frames with `New-OVLogicalEnclosure`.
+- Applying consistent interconnect configuration across multiple enclosures.
+
+Use `-Name` to filter results by name (wildcards supported). Use `-Export` to save the enclosure group definition as a JSON file for backup or migration.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name (or wildcard pattern) of the enclosure group to retrieve. Supports `*` and `?` wildcard characters.
+</ParamField>
+
+<ParamField path="Export" type="String">
+  A file system path to export the enclosure group object(s) as a JSON file. The parent directory must exist. Alias: `-exportFile`, `-x`.
+
+  Example: `C:\Backups\enclosure-groups.json`
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The HPE OneView appliance connection object or connection name. Defaults to the current default connection stored in `${Global:ConnectedSessions}`.
+</ParamField>
+
+## Examples
+
+### Example 1: List all enclosure groups
+
+Return all enclosure groups defined on the appliance.
+
+```powershell
+Get-OVEnclosureGroup
+```
+
+```
+Name                    EnclosureCount  InterconnectBayMappings
+----                    --------------  -----------------------
+Prod VC FlexFabric Group 1  1           {Bay1=LIG Prod, Bay2=LIG Prod}
+Synergy Default EG          3           {Frame1:Bay3=Default Synergy LIG, ...}
+Default EG 1                1           {Bay1=Default VC FF LIG, Bay2=Default VC FF LIG}
+```
+
+### Example 2: Get a specific enclosure group
+
+Retrieve a single enclosure group by exact name and store it in a variable.
+
+```powershell
+$EG = Get-OVEnclosureGroup -Name "Synergy Default EG"
+$EG | Format-List
+```
+
+### Example 3: Filter with wildcard
+
+Return all enclosure groups whose names contain `Synergy`.
+
+```powershell
+Get-OVEnclosureGroup -Name "*Synergy*"
+```
+
+### Example 4: Export enclosure group definitions to JSON
+
+Save all enclosure group definitions to a JSON file for backup.
+
+```powershell
+Get-OVEnclosureGroup -Export "C:\Backups\enclosure-groups.json"
+```
+
+### Example 5: Use the group object with Add-OVEnclosure
+
+Retrieve an enclosure group and pass it to `Add-OVEnclosure`.
+
+```powershell
+$EG         = Get-OVEnclosureGroup -Name "Prod EG 1"
+$Credential = Get-Credential -UserName administrator
+
+Add-OVEnclosure -Hostname '172.18.1.11' -EnclosureGroup $EG -Credential $Credential
+```
+
+## Output
+
+Returns one or more `HPEOneView.EnclosureGroup` objects. Key properties include `name`, `enclosureCount`, `interconnectBayMappings`, `ipAddressingMode`, and `uri`.
+
+Returns an empty collection when no matching groups are found.
+
+## Related cmdlets
+
+- `New-OVEnclosureGroup` — Create a new enclosure group.
+- `Set-OVEnclosureGroup` — Modify an existing enclosure group.
+- `Remove-OVEnclosureGroup` — Delete an enclosure group.
+- `Add-OVEnclosure` — Add a c-Class enclosure using an enclosure group.
+- `Get-OVLogicalInterconnectGroup` — Retrieve LIG objects referenced by enclosure groups.

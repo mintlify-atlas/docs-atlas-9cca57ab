@@ -1,0 +1,249 @@
+---
+title: "New-OVNetwork"
+description: "Create a new Ethernet, Fibre Channel, or FCoE network resource on the HPE OneView appliance."
+---
+
+## Synopsis
+
+Creates one or more Ethernet, Fibre Channel, or FCoE network resources on the connected HPE OneView appliance.
+
+## Syntax
+
+### Ethernet network
+
+```powershell
+New-OVNetwork
+    -Name <String>
+    [-Type <String>]
+    [-VlanId <Int32>]
+    [-VLANType <String>]
+    [-Purpose <String>]
+    [-SmartLink <Boolean>]
+    [-PrivateNetwork <Boolean>]
+    [-TypicalBandwidth <Int32>]
+    [-MaximumBandwidth <Int32>]
+    [-Subnet <Object>]
+    [-NetworkSet <Object[]>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### VLAN range (bulk Ethernet)
+
+```powershell
+New-OVNetwork
+    -Name <String>
+    -VlanRange <String>
+    [-VLANType <String>]
+    [-Purpose <String>]
+    [-SmartLink <Boolean>]
+    [-PrivateNetwork <Boolean>]
+    [-TypicalBandwidth <Int32>]
+    [-MaximumBandwidth <Int32>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Fibre Channel network
+
+```powershell
+New-OVNetwork
+    -Name <String>
+    -Type <String>
+    [-FabricType <String>]
+    [-ManagedSan <Object>]
+    [-TypicalBandwidth <Int32>]
+    [-MaximumBandwidth <Int32>]
+    [-LinkStabilityTime <Int32>]
+    [-AutoLoginRedistribution <Boolean>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### FCoE network
+
+```powershell
+New-OVNetwork
+    -Name <String>
+    -Type FCoE
+    -VlanId <Int32>
+    [-ManagedSan <Object>]
+    [-TypicalBandwidth <Int32>]
+    [-MaximumBandwidth <Int32>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Import from file
+
+```powershell
+New-OVNetwork
+    -ImportFile <String>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVNetwork` creates network resources on the HPE OneView appliance. The type of network created is determined by the `-Type` parameter (default is `Ethernet`).
+
+For Ethernet networks, you can supply a single VLAN ID with `-VlanId` or create multiple networks at once using a VLAN range expression with `-VlanRange` (e.g., `"100-120,123,135"`). A VLAN range creates one network per VLAN ID, appending the VLAN ID as a suffix to the base name.
+
+Fibre Channel networks support both fabric-attached (FabricAttach) and direct-attach (DirectAttach) fabric types. Direct-attach networks are used with directly cabled SAN arrays.
+
+Bandwidth values are in Mb/s. The default typical bandwidth is 2500 Mb/s and the default maximum bandwidth is 20000 Mb/s.
+
+## Parameters
+
+<ParamField path="Name" type="String" required>
+  The name of the network to create. For VLAN range bulk creation, this value is used as the network name prefix.
+</ParamField>
+
+<ParamField path="Type" type="String">
+  The network type to create. Accepted values:
+
+  - `Ethernet` (default)
+  - `FC` / `FibreChannel` / `Fibre Channel`
+  - `FCoE`
+  - `RoCE`
+</ParamField>
+
+<ParamField path="VlanId" type="Int32">
+  The 802.1Q VLAN ID for an Ethernet or FCoE network. Valid range: 1–4095. Required for FCoE networks.
+</ParamField>
+
+<ParamField path="VlanRange" type="String">
+  A VLAN range expression for bulk Ethernet network creation, such as `"100-120,123,135"`. Creates one network per resolved VLAN ID. Cannot be combined with `-VlanId`.
+</ParamField>
+
+<ParamField path="VLANType" type="String">
+  The VLAN tagging type for Ethernet networks. Accepted values: `Tagged` (default), `Untagged`, `Tunnel`.
+</ParamField>
+
+<ParamField path="Purpose" type="String">
+  The intended use of an Ethernet network. Accepted values: `General` (default), `Management`, `VMMigration`, `FaultTolerance`, `ISCSI`.
+</ParamField>
+
+<ParamField path="SmartLink" type="Boolean">
+  When `$true` (default), the network propagates link state to server adapters when the uplink loses connectivity.
+</ParamField>
+
+<ParamField path="PrivateNetwork" type="Boolean">
+  When `$true`, prevents inter-server communication on this network (server-to-switch traffic only). Default is `$false`.
+</ParamField>
+
+<ParamField path="TypicalBandwidth" type="Int32">
+  The preferred bandwidth allocation for this network, in Mb/s. Valid range: 2–50000. Default: 2500.
+</ParamField>
+
+<ParamField path="MaximumBandwidth" type="Int32">
+  The maximum bandwidth allocation for this network, in Mb/s. Valid range: 100–50000. Default: 20000.
+</ParamField>
+
+<ParamField path="Subnet" type="Object">
+  An IPv4 subnet object (from `Get-OVAddressPoolSubnet`) to associate with the Ethernet network for iSCSI or management use.
+</ParamField>
+
+<ParamField path="NetworkSet" type="Object[]">
+  One or more network set objects to add this Ethernet network to upon creation.
+</ParamField>
+
+<ParamField path="FabricType" type="String">
+  The Fibre Channel fabric topology. Accepted values:
+
+  - `FabricAttach` / `FA` (default) — fabric-attached SAN switch topology
+  - `DirectAttach` / `DA` — direct-attach (no SAN switch)
+</ParamField>
+
+<ParamField path="ManagedSan" type="Object">
+  A managed SAN object to associate with a Fibre Channel or FCoE network.
+</ParamField>
+
+<ParamField path="LinkStabilityTime" type="Int32">
+  The number of seconds to wait after a link is restored before redistributing logins. Valid range: 1–1800. Default: 30.
+</ParamField>
+
+<ParamField path="AutoLoginRedistribution" type="Boolean">
+  When `$true`, HPE OneView automatically redistributes FC logins across available paths after a link is restored. Default: `$false`.
+</ParamField>
+
+<ParamField path="Async" type="Switch">
+  Return the async task object immediately without waiting for completion.
+</ParamField>
+
+<ParamField path="Scope" type="HPEOneView.Appliance.ScopeCollection[]">
+  One or more scope objects to assign to the new network.
+</ParamField>
+
+<ParamField path="ImportFile" type="String">
+  Path to a JSON file that defines one or more networks to import.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Create a single tagged Ethernet network
+
+```powershell
+New-OVNetwork -Type Ethernet -Name "red" -VlanId 10 -SmartLink $true
+```
+
+### Create multiple Ethernet networks
+
+```powershell
+New-OVNetwork -Type Ethernet -Name "blue"   -VlanId 20 -SmartLink $true
+New-OVNetwork -Type Ethernet -Name "green"  -VlanId 30 -SmartLink $true
+New-OVNetwork -Type Ethernet -Name "yellow" -VlanId 40 -SmartLink $true
+New-OVNetwork -Type Ethernet -Name "black"  -VlanId 50 -SmartLink $true
+```
+
+### Bulk-create Ethernet networks from a VLAN range
+
+```powershell
+New-OVNetwork -Name "NetSuffix" -VlanRange "100-120,123,135"
+```
+
+### Create fabric-attached Fibre Channel networks
+
+```powershell
+New-OVNetwork -Name "Production Fabric A" -Type FC -TypicalBandwidth 4000 -AutoLoginRedistribution $true
+New-OVNetwork -Name "Production Fabric B" -Type FC -TypicalBandwidth 4000 -AutoLoginRedistribution $true
+```
+
+### Create direct-attach Fibre Channel networks
+
+```powershell
+New-OVNetwork -Name "DirectAttach Fabric A" -Type FC -TypicalBandwidth 4000 -AutoLoginRedistribution $true -FabricType DirectAttach
+New-OVNetwork -Name "DirectAttach Fabric B" -Type FC -TypicalBandwidth 4000 -AutoLoginRedistribution $true -FabricType DirectAttach
+```
+
+### Pipe integers to create VLAN networks in bulk
+
+```powershell
+20, 30, 40, 50, 60 | ForEach-Object {
+    New-OVNetwork -Type Ethernet -Name "VLAN $_" -VlanId $_ -SmartLink $true
+}
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` when the `-Async` switch is used, or the created network object after the task completes.
+
+## Related cmdlets
+
+- [Get-OVNetwork](/cmdlets/networking/get-ovnetwork)
+- [Set-OVNetwork](/cmdlets/networking/set-ovnetwork)
+- [Remove-OVNetwork](/cmdlets/networking/remove-ovnetwork)
+- [New-OVNetworkSet](/cmdlets/networking/new-ovnetworkset)
+- [New-OVUplinkSet](/cmdlets/networking/new-ovuplinkset)

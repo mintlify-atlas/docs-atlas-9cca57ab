@@ -1,0 +1,121 @@
+---
+title: "Get-OVNetwork"
+description: "Retrieve Ethernet, Fibre Channel, and FCoE network resources from the HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves one or more network resources (Ethernet, Fibre Channel, or FCoE) from the connected HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVNetwork
+    [-Name <String>]
+    [-Type <String>]
+    [-Purpose <String>]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [-ExportFile <String>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVNetwork` queries the HPE OneView appliance for network resources. When no parameters are specified, the cmdlet returns all Ethernet, Fibre Channel, and FCoE networks visible within the current scope. You can narrow results by name, type, purpose, or label.
+
+Wildcard characters are supported in the `-Name` parameter.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name of the network resource to retrieve. Supports wildcard characters (`*`, `?`). When omitted, all networks are returned.
+</ParamField>
+
+<ParamField path="Type" type="String">
+  Filter results to a specific network type. Accepted values:
+
+  - `Ethernet`
+  - `FC` / `FibreChannel`
+  - `FCOE`
+  - `ROCE`
+
+  When omitted, all network types are returned.
+</ParamField>
+
+<ParamField path="Purpose" type="String">
+  Filter Ethernet networks by their configured purpose. Accepted values:
+
+  - `General`
+  - `Management`
+  - `VMMigration`
+  - `FaultTolerance`
+  - `ISCSI`
+</ParamField>
+
+<ParamField path="Label" type="String">
+  Filter results by a resource label assigned to the network.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Filter results to resources that belong to the specified scope. Defaults to `AllResourcesInScope`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session (`${Global:ConnectedSessions}`).
+</ParamField>
+
+<ParamField path="ExportFile" type="String">
+  Path to a JSON file where the retrieved network objects will be exported.
+</ParamField>
+
+## Examples
+
+### Return all networks
+
+```powershell
+Get-OVNetwork
+```
+
+### Return all Ethernet networks
+
+```powershell
+Get-OVNetwork -Type Ethernet
+```
+
+### Return a specific network by name
+
+```powershell
+Get-OVNetwork -Name "Production Fabric A" -Type FibreChannel
+```
+
+### Use a wildcard to list networks with a common prefix
+
+```powershell
+Get-OVNetwork -Name "Prod Vlan *" -Type Ethernet
+```
+
+### Filter Ethernet networks by purpose
+
+```powershell
+Get-OVNetwork -Type Ethernet -Purpose Management
+```
+
+### Retrieve networks and pass them to another cmdlet
+
+```powershell
+$Networks = "red", "blue", "green" | Get-OVNetwork -Type Ethernet
+```
+
+## Output
+
+`HPEOneView.Networking.EthernetNetwork`, `HPEOneView.Networking.FibreChannelNetwork`, or `HPEOneView.Networking.FCoENetwork` objects depending on network type.
+
+## Related cmdlets
+
+- [New-OVNetwork](/cmdlets/networking/new-ovnetwork)
+- [Set-OVNetwork](/cmdlets/networking/set-ovnetwork)
+- [Remove-OVNetwork](/cmdlets/networking/remove-ovnetwork)
+- [Get-OVNetworkSet](/cmdlets/networking/get-ovnetworkset)
+- [New-OVUplinkSet](/cmdlets/networking/new-ovuplinkset)

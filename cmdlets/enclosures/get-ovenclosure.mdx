@@ -1,0 +1,103 @@
+---
+title: "Get-OVEnclosure"
+description: "Retrieve HPE Synergy frame or c-Class enclosure objects managed by HPE OneView."
+---
+
+## Synopsis
+
+Retrieve one or more enclosure objects from the HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVEnclosure
+    [-Name <String>]
+    [-Label <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVEnclosure` returns enclosure resource objects from the HPE OneView appliance. Enclosures represent the physical chassis — either an HPE Synergy frame or an HPE BladeSystem c-Class enclosure — that contains blade servers, interconnects, and supporting hardware.
+
+With no parameters, the cmdlet returns all enclosures visible within the current user's scope. Use `-Name` to filter by name (wildcards are supported). Use `-Label` to filter by a resource label tag.
+
+<Note>
+HPE Synergy frames are added to OneView automatically during initial frame discovery. HPE BladeSystem c-Class enclosures must be explicitly added using `Add-OVEnclosure`.
+</Note>
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name (or wildcard pattern) of the enclosure to retrieve. Supports `*` and `?` wildcard characters.
+
+  Example: `"Enclosure-*"` returns all enclosures whose name begins with `Enclosure-`.
+</ParamField>
+
+<ParamField path="Label" type="String">
+  Filters results to enclosures that have been tagged with the specified label. Labels are assigned using `Set-OVResource` or the HPE OneView UI.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The HPE OneView appliance connection object or connection name. Defaults to the current default connection stored in `${Global:ConnectedSessions}`.
+
+  Accepts a single connection or a collection of connections for multi-appliance queries.
+</ParamField>
+
+## Examples
+
+### Example 1: List all enclosures
+
+Return all enclosures from the default connected appliance.
+
+```powershell
+Get-OVEnclosure
+```
+
+```
+Name            Status  Model                   SerialNumber   NumBlades
+----            ------  -----                   ------------   ---------
+SYN-Frame-1     OK      HPE Synergy 12000 Frame  CZ123456AB     12
+SYN-Frame-2     OK      HPE Synergy 12000 Frame  CZ123456CD     8
+C7000-Prod-1    OK      HPE BladeSystem c7000    GB123456EF     16
+```
+
+### Example 2: Filter by name
+
+Return only enclosures whose names begin with `SYN-`.
+
+```powershell
+Get-OVEnclosure -Name "SYN-*"
+```
+
+### Example 3: Filter by label and inspect details
+
+Return enclosures tagged with the `production` label and display full detail.
+
+```powershell
+Get-OVEnclosure -Label "production" | Format-List
+```
+
+### Example 4: Query multiple appliances
+
+Return all enclosures across two appliance connections.
+
+```powershell
+$connections = Connect-OVMgmt -Hostname "appliance1.corp.com","appliance2.corp.com" -Credential (Get-Credential)
+Get-OVEnclosure -ApplianceConnection $connections
+```
+
+## Output
+
+Returns one or more `HPEOneView.Enclosure` objects. Each object includes properties such as `name`, `model`, `serialNumber`, `enclosureType`, `deviceBayCount`, `powerState`, and `uri`.
+
+Returns an empty collection if no matching enclosures are found. Throws a non-terminating error if the specified name produces no results when `-ErrorAction Stop` is set.
+
+## Related cmdlets
+
+- `Add-OVEnclosure` — Add an HPE BladeSystem c-Class enclosure to OneView management.
+- `Get-OVEnclosureGroup` — Retrieve enclosure group configuration templates.
+- `Get-OVLogicalEnclosure` — Retrieve logical enclosure objects (HPE Synergy).
+- `Remove-OVEnclosure` — Remove an enclosure from OneView management.
+- `Update-OVEnclosure` — Refresh or update enclosure data.

@@ -1,0 +1,137 @@
+---
+title: "Set-OVRemoteSupport"
+description: "Configure HPE Remote Support settings on an HPE OneView appliance, including company name and device auto-enrollment."
+---
+
+## Synopsis
+
+Configure the HPE Remote Support company name, auto-enrollment, and global enable/disable state.
+
+## Syntax
+
+### Default — configure Remote Support settings
+
+```powershell
+Set-OVRemoteSupport
+    -CompanyName <String>
+    [-OptimizeOptIn]
+    [-AutoEnableDevices <Bool>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Enable — enable Remote Support globally
+
+```powershell
+Set-OVRemoteSupport
+    -Enable
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Disable — disable Remote Support globally
+
+```powershell
+Set-OVRemoteSupport
+    -Disable
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVRemoteSupport` updates the appliance-level HPE Remote Support configuration. Depending on the parameter set used, you can:
+
+- Set the company name and auto-device-enablement policy (Default parameter set).
+- Globally enable Remote Support on the appliance (Enable parameter set).
+- Globally disable Remote Support on the appliance (Disable parameter set).
+
+Before enabling Remote Support, at least one Remote Support contact must be designated as the default contact. Use `New-OVRemoteSupportContact` and `Set-OVRemoteSupportPrimaryContact` to configure contacts.
+
+By default, the cmdlet waits for the resulting async task to complete. Use `-Async` to receive the task object and manage completion with `Wait-OVTaskComplete`.
+
+<Note>
+The `-InsightOnlineUsername` and `-InsightOnlinePassword` parameters exist in the code but are marked obsolete — HPE Insight Online is no longer available.
+</Note>
+
+## Parameters
+
+<ParamField path="CompanyName" type="String" required>
+The company name associated with the HPE support contract. This value is recorded with HPE for entitlement lookups. Required for the Default parameter set.
+</ParamField>
+
+<ParamField path="OptimizeOptIn" type="SwitchParameter">
+Opt in to HPE marketing communications. When specified, sets `marketingOptIn` to `$true` in the configuration.
+</ParamField>
+
+<ParamField path="AutoEnableDevices" type="Bool">
+When `$true`, newly added server hardware and enclosures are automatically enrolled in Remote Support. When `$false`, devices must be enabled manually via `Enable-OVRemoteSupport`.
+</ParamField>
+
+<ParamField path="Enable" type="SwitchParameter">
+Globally enable Remote Support on the appliance. Requires a default Remote Support contact to be configured first.
+</ParamField>
+
+<ParamField path="Disable" type="SwitchParameter">
+Globally disable Remote Support on the appliance.
+</ParamField>
+
+<ParamField path="Async" type="SwitchParameter">
+Return the async task object immediately without waiting for completion. Use with `Wait-OVTaskComplete`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Set company name and enable auto-enrollment
+
+```powershell
+Set-OVRemoteSupport -CompanyName 'Acme Corporation' -AutoEnableDevices $true
+```
+
+### Enable Remote Support globally
+
+```powershell
+Set-OVRemoteSupport -Enable
+```
+
+### Disable Remote Support globally
+
+```powershell
+Set-OVRemoteSupport -Disable
+```
+
+### Configure and wait asynchronously
+
+```powershell
+$task = Set-OVRemoteSupport -CompanyName 'Acme Corporation' -AutoEnableDevices $true -Async
+$task | Wait-OVTaskComplete
+```
+
+### Configure across multiple appliances
+
+```powershell
+$ConnectedSessions | ForEach-Object {
+    Set-OVRemoteSupport -CompanyName 'Acme Corporation' -AutoEnableDevices $true -ApplianceConnection $_
+}
+```
+
+## Output
+
+When `-Async` is **not** used: the completed task result is returned as `HPEOneview.Appliance.TaskResource`.
+
+When `-Async` is used: an `HPEOneview.Appliance.TaskResource` task object is returned immediately.
+
+## Related cmdlets
+
+- [Get-OVRemoteSupport](/cmdlets/remote-support/get-ovremotesupport)
+- [Enable-OVRemoteSupport](/cmdlets/remote-support/enable-ovremotesupport)
+- [Disable-OVRemoteSupport](/cmdlets/remote-support/disable-ovremotesupport)
+- [Wait-OVTaskComplete](/cmdlets/alerts/wait-ovtaskcomplete)
+- [Get-OVRemoteSupportContact](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage

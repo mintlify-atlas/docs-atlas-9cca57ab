@@ -1,0 +1,120 @@
+---
+title: "Get-OVLogicalInterconnectGroup"
+description: "Retrieve Logical Interconnect Group resources used as configuration templates for logical interconnects."
+---
+
+## Synopsis
+
+Retrieves one or more Logical Interconnect Group (LIG) resources from the connected HPE OneView appliance.
+
+## Syntax
+
+### Default
+
+```powershell
+Get-OVLogicalInterconnectGroup
+    [-Name <String>]
+    [-Type <String>]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ExportFile <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Pipeline
+
+```powershell
+Get-OVLogicalInterconnectGroup
+    -InputObject <Object>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVLogicalInterconnectGroup` retrieves Logical Interconnect Group (LIG) resources from HPE OneView. A LIG is a policy template that defines the desired interconnect configuration for an enclosure group, including bay assignments, uplink sets, SNMP settings, and QoS policies.
+
+When an enclosure group is created and enclosures are added to it, HPE OneView creates a logical interconnect for each enclosure that inherits its configuration from the governing LIG. Changes made to the LIG can be pushed down to all associated logical interconnects to keep them in compliance.
+
+The `-InputObject` pipeline parameter accepts objects that have an associated LIG (such as a logical interconnect), and resolves the governing LIG.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name of the Logical Interconnect Group to retrieve. When omitted, all LIGs are returned.
+</ParamField>
+
+<ParamField path="Type" type="String">
+  Filter results by LIG type. Accepted values:
+
+  - `SAS` — SAS LIGs for HPE Synergy SAS interconnects
+  - `VC` — Virtual Connect LIGs (Ethernet/FC)
+</ParamField>
+
+<ParamField path="Label" type="String">
+  Filter results by a resource label assigned to the LIG.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Filter results to resources that belong to the specified scope. Defaults to `AllResourcesInScope`.
+</ParamField>
+
+<ParamField path="ExportFile" type="String">
+  Path to a JSON file where the retrieved LIG objects will be exported.
+</ParamField>
+
+<ParamField path="InputObject" type="Object">
+  A resource object (such as a logical interconnect) that has an associated LIG. The cmdlet resolves the governing LIG from the provided object. Supports pipeline input.
+
+  Alias: `-Resource`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Return all Logical Interconnect Groups
+
+```powershell
+Get-OVLogicalInterconnectGroup
+```
+
+### Return a specific LIG by name
+
+```powershell
+Get-OVLogicalInterconnectGroup -Name "LIG Prod"
+```
+
+### Return all SAS LIGs
+
+```powershell
+Get-OVLogicalInterconnectGroup -Type SAS
+```
+
+### Retrieve a LIG after creating it
+
+```powershell
+$lig = New-OVLogicalInterconnectGroup -Name "LIG Prod" -Bays @{1 = "FlexFabric"; 2 = "FlexFabric"} `
+    | Wait-OVTaskComplete `
+    | Get-OVLogicalInterconnectGroup
+```
+
+### Export a LIG to a JSON file
+
+```powershell
+Get-OVLogicalInterconnectGroup -Name "LIG Prod" -ExportFile "C:\Backup\lig-prod.json"
+```
+
+## Output
+
+`HPEOneView.Networking.LogicalInterconnectGroup` objects.
+
+## Related cmdlets
+
+- [New-OVLogicalInterconnectGroup](/cmdlets/networking/new-ovlogicalinterconnectgroup)
+- [Get-OVLogicalInterconnect](/cmdlets/networking/get-ovlogicalinterconnect)
+- [New-OVUplinkSet](/cmdlets/networking/new-ovuplinkset)
+- [Get-OVUplinkSet](/cmdlets/networking/get-ovuplinkset)

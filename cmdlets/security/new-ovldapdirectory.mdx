@@ -1,0 +1,176 @@
+---
+title: "New-OVLdapDirectory"
+description: "Configure an Active Directory or OpenLDAP authentication directory on an HPE OneView appliance."
+---
+
+## Synopsis
+
+Registers a new Active Directory or OpenLDAP authentication directory on an HPE OneView appliance.
+
+## Syntax
+
+**Active Directory:**
+
+```powershell
+New-OVLdapDirectory
+    -Name <String>
+    -AD
+    -BaseDN <String>
+    -Servers <Array>
+    [-Username <String>]
+    [-Password <Object>]
+    [-Credential <PSCredential>]
+    [-ServiceAccount]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**OpenLDAP:**
+
+```powershell
+New-OVLdapDirectory
+    -Name <String>
+    -OpenLDAP
+    -BaseDN <String>
+    -OrganizationalUnits <Array>
+    -Servers <Array>
+    [-UserNamingAttribute <String>]
+    [-Username <String>]
+    [-Password <Object>]
+    [-Credential <PSCredential>]
+    [-ServiceAccount]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVLdapDirectory` adds an Active Directory or OpenLDAP directory to the appliance's authentication configuration, enabling users from that directory to log in to HPE OneView with their existing credentials.
+
+Use the `-AD` switch for Microsoft Active Directory and `-OpenLDAP` for an OpenLDAP-compatible directory service.
+
+Directory server entries are created using `New-OVLdapServer` and passed as an array to `-Servers`.
+
+<Note>
+The `-Username` and `-Password` parameters are deprecated. Use `-Credential` with a `PSCredential` object instead.
+</Note>
+
+## Parameters
+
+<ParamField path="Name" type="string" required>
+  A friendly name for this directory configuration, displayed in the HPE OneView UI.
+</ParamField>
+
+<ParamField path="AD" type="switch" required>
+  Specifies that this is a Microsoft Active Directory configuration. Mutually exclusive with `-OpenLDAP`.
+</ParamField>
+
+<ParamField path="OpenLDAP" type="switch" required>
+  Specifies that this is an OpenLDAP directory configuration. Aliased as `LDAP`. Mutually exclusive with `-AD`.
+</ParamField>
+
+<ParamField path="BaseDN" type="string" required>
+  The base distinguished name (DN) for the directory, for example `DC=corp,DC=example,DC=com`. This defines the root of all directory searches. Aliased as `root` and `rootdn`.
+</ParamField>
+
+<ParamField path="OrganizationalUnits" type="Array" required>
+  One or more organizational unit (OU) distinguished names to search for user accounts. Required for OpenLDAP only.
+</ParamField>
+
+<ParamField path="Servers" type="Array" required>
+  An array of directory server objects created with `New-OVLdapServer`. Each entry specifies the hostname, port, and certificate for one LDAP/AD domain controller.
+</ParamField>
+
+<ParamField path="UserNamingAttribute" type="string" default="CN">
+  The LDAP attribute used as the login username for OpenLDAP directories. Accepted values are `CN` and `UID`. Defaults to `CN`. Not applicable for Active Directory.
+</ParamField>
+
+<ParamField path="Username" type="string">
+  A service account username for querying the directory. Deprecated — use `-Credential` instead. Aliased as `u` and `user`.
+</ParamField>
+
+<ParamField path="Password" type="Object">
+  The password for the service account specified by `-Username`. Deprecated — use `-Credential` instead. Aliased as `p` and `pass`.
+</ParamField>
+
+<ParamField path="Credential" type="PSCredential">
+  A `PSCredential` object containing the service account credentials used to query the directory. Preferred over `-Username` and `-Password`.
+</ParamField>
+
+<ParamField path="ServiceAccount" type="switch">
+  Specifies that the supplied credentials are a dedicated service account, which changes how the appliance authenticates to the directory.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object" default="Default connected session">
+  The appliance connection object or name. Defaults to the default connected session. Accepts an array of connections to register the directory on multiple appliances. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### Register an Active Directory domain
+
+```powershell
+# Build a directory server entry
+$adServer = New-OVLdapServer -Hostname 'dc1.corp.example.com' -Port 636 -Certificate 'C:\Certs\dc1.cer'
+
+# Supply credentials for directory queries
+$cred = Get-Credential
+
+# Register the directory
+New-OVLdapDirectory `
+    -Name 'corp.example.com' `
+    -AD `
+    -BaseDN 'DC=corp,DC=example,DC=com' `
+    -Servers $adServer `
+    -Credential $cred
+```
+
+Registers the `corp.example.com` Active Directory domain with a single domain controller at `dc1.corp.example.com` using LDAPS on port 636.
+
+### Register an Active Directory domain with multiple domain controllers
+
+```powershell
+$cred = Get-Credential
+
+$servers = @(
+    New-OVLdapServer -Hostname 'dc1.corp.example.com' -Port 636 -Certificate 'C:\Certs\dc1.cer',
+    New-OVLdapServer -Hostname 'dc2.corp.example.com' -Port 636 -Certificate 'C:\Certs\dc2.cer'
+)
+
+New-OVLdapDirectory `
+    -Name 'corp.example.com' `
+    -AD `
+    -BaseDN 'DC=corp,DC=example,DC=com' `
+    -Servers $servers `
+    -Credential $cred
+```
+
+Registers the domain with two domain controllers for redundancy.
+
+### Register an OpenLDAP directory
+
+```powershell
+$cred = Get-Credential
+$server = New-OVLdapServer -Hostname 'ldap.example.com' -Port 636 -Certificate 'C:\Certs\ldap.cer'
+
+New-OVLdapDirectory `
+    -Name 'example.com LDAP' `
+    -OpenLDAP `
+    -BaseDN 'DC=example,DC=com' `
+    -OrganizationalUnits 'OU=HPEUsers,DC=example,DC=com' `
+    -Servers $server `
+    -UserNamingAttribute 'UID' `
+    -Credential $cred
+```
+
+Registers an OpenLDAP directory and configures it to search the `HPEUsers` OU using `UID` as the login attribute.
+
+## Output
+
+`HPEOneview.Appliance.AuthDirectory`
+
+Returns the newly created authentication directory configuration object.
+
+## Related cmdlets
+
+- [Get-OVLdapDirectory](/cmdlets/security/get-ovldapdirectory)

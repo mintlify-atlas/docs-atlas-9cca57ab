@@ -1,0 +1,423 @@
+---
+title: "New-OVServerProfile"
+description: "Create a new server profile and optionally assign it to server hardware."
+---
+
+## Synopsis
+
+Creates a server profile on an HPE OneView appliance. Profiles can be built from scratch or derived from a server profile template, and optionally assigned to a specific server at creation time.
+
+## Syntax
+
+### From a server profile template (SPT)
+
+```powershell
+New-OVServerProfile
+    -Name <String>
+    -ServerProfileTemplate <Object>
+    [-AssignmentType <String>]
+    [-Server <Object>]
+    [-Description <String>]
+    [-Connections <Array>]
+    [-FCConnectionAddresses <Hashtable>]
+    [-IscsiIPv4Address <Array>]
+    [-ISCSIInitatorName <String>]
+    [-StorageController <Object>]
+    [-ManageIloSettings <Bool>]
+    [-IloSettings <PSCustomObject>]
+    [-Firmware]
+    [-Baseline <Object>]
+    [-BaselinePatchLevel <Version>]
+    [-FirmwareInstallationPolicy <String>]
+    [-FirmwareInstallMode <String>]
+    [-FirmwareActivationMode <String>]
+    [-FirmwareActivateDateTime <DateTime>]
+    [-ReinstallFirmware]
+    [-ManageBoot]
+    [-MacAssignment <String>]
+    [-WwnAssignment <String>]
+    [-SnAssignment <String>]
+    [-SerialNumber <String>]
+    [-Uuid <String>]
+    [-HideUnusedFlexNics <Bool>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-Passthru]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### From scratch (Default / SAN storage)
+
+```powershell
+New-OVServerProfile
+    -Name <String>
+    [-AssignmentType <String>]
+    [-Server <Object>]
+    [-Enclosure <Object>]
+    [-EnclosureBay <Int32>]
+    [-Description <String>]
+    [-Connections <Array>]
+    [-EnclosureGroup <Object>]
+    [-ServerHardwareType <Object>]
+    [-Firmware]
+    [-Baseline <Object>]
+    [-BaselinePatchLevel <Version>]
+    [-FirmwareInstallationPolicy <String>]
+    [-FirmwareInstallMode <String>]
+    [-FirmwareActivationMode <String>]
+    [-FirmwareActivateDateTime <DateTime>]
+    [-ReinstallFirmware]
+    [-Bios]
+    [-BiosSettings <Array>]
+    [-BootMode <String>]
+    [-PxeBootPolicy <String>]
+    [-ManageBoot]
+    [-BootOrder <Array>]
+    [-SecureBoot <String>]
+    [-LocalStorage]
+    [-StorageController <Object>]
+    [-ManageIloSettings <Bool>]
+    [-IloSettings <PSCustomObject>]
+    [-SANStorage]
+    [-HostOStype <String>]
+    [-StorageVolume <Object>]
+    [-EvenPathDisabled]
+    [-OddPathDisabled]
+    [-Affinity <String>]
+    [-MacAssignment <String>]
+    [-WwnAssignment <String>]
+    [-SnAssignment <String>]
+    [-SerialNumber <String>]
+    [-Uuid <String>]
+    [-HideUnusedFlexNics <Bool>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-Passthru]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Import from JSON file
+
+```powershell
+New-OVServerProfile
+    -Import
+    -ProfileObj <Object>
+    [-AssignmentType <String>]
+    [-Server <Object>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVServerProfile` creates a server profile resource in HPE OneView. A profile defines the complete hardware configuration — networking connections, firmware policy, boot settings, local storage, SAN storage, and BIOS settings — for a server.
+
+When `-ServerProfileTemplate` is provided, the new profile inherits all settings defined in the template. Individual parameters can supplement template values (for example, `-Server` to assign the profile to specific hardware).
+
+Use `-AssignmentType` to control how the profile is assigned:
+
+| Value | Description |
+|---|---|
+| `Server` | (default) Assign to a specific server hardware resource provided via `-Server`. |
+| `Bay` | Assign to a specific enclosure bay via `-Enclosure` and `-EnclosureBay`. |
+| `Unassigned` | Create the profile without assigning it to any hardware. |
+
+Use `-Async` to return immediately with a task object instead of waiting for the operation to complete.
+
+## Parameters
+
+<ParamField path="Name" type="string" required>
+  Name for the new server profile.
+</ParamField>
+
+<ParamField path="AssignmentType" type="string" default="Server">
+  Controls how the profile is assigned to hardware. Valid values: `Server`, `Bay`, `Unassigned`. Alias: `assign`.
+</ParamField>
+
+<ParamField path="Server" type="object">
+  Server hardware object (from `Get-OVServer`) to assign the profile to when `AssignmentType` is `Server`. Accepts pipeline input.
+</ParamField>
+
+<ParamField path="Enclosure" type="object">
+  Enclosure object to target when `AssignmentType` is `Bay`.
+</ParamField>
+
+<ParamField path="EnclosureBay" type="int">
+  Enclosure bay number (1–16) to target when `AssignmentType` is `Bay`. Alias: `bay`.
+</ParamField>
+
+<ParamField path="ServerProfileTemplate" type="object" required>
+  Server profile template object (from `Get-OVServerProfileTemplate`) to derive the new profile from. Required in the `SPT` parameter set.
+</ParamField>
+
+<ParamField path="Description" type="string">
+  Optional text description for the server profile.
+</ParamField>
+
+<ParamField path="Connections" type="array">
+  Array of connection objects created by `New-OVServerProfileConnection`. Defines the network connections for the profile.
+</ParamField>
+
+<ParamField path="FCConnectionAddresses" type="hashtable">
+  When creating from a template with FC connections, provides a mapping of connection IDs to WWN addresses. Only valid with the `SPT` parameter set.
+</ParamField>
+
+<ParamField path="EnclosureGroup" type="object">
+  Enclosure group object (from `Get-OVEnclosureGroup`). Required when specifying `ServerHardwareType` for blade servers. Alias: `eg`.
+</ParamField>
+
+<ParamField path="ServerHardwareType" type="object">
+  Server hardware type object (from `Get-OVServerHardwareType`) that defines the hardware model compatibility. Alias: `sht`.
+</ParamField>
+
+<ParamField path="Firmware" type="switch">
+  Enable firmware management for the profile.
+</ParamField>
+
+<ParamField path="Baseline" type="object">
+  Firmware baseline object (from `Get-OVBaseline`) to apply to the server.
+</ParamField>
+
+<ParamField path="BaselinePatchLevel" type="version">
+  Specific patch level version to target within the selected firmware baseline.
+</ParamField>
+
+<ParamField path="FirmwareInstallationPolicy" type="string" default="LowerThanBaseline">
+  Policy controlling when firmware is updated. Valid values: `LowerThanBaseline`, `NotEqualToBaseline`.
+</ParamField>
+
+<ParamField path="FirmwareInstallMode" type="string" default="FirmwareAndSoftware">
+  Firmware install mode. Valid values: `FirmwareOnly`, `FirmwareAndSoftware`, `FirmwareOffline`, `FirmwareAndOSDrivers`, `FirmwareOnlyOfflineMode`. Alias: `FirmwareMode`.
+</ParamField>
+
+<ParamField path="FirmwareActivationMode" type="string" default="Immediate">
+  When firmware activation occurs. Valid values: `Immediate`, `Scheduled`, `NotScheduled`.
+</ParamField>
+
+<ParamField path="FirmwareActivateDateTime" type="datetime">
+  Scheduled date and time for firmware activation when `FirmwareActivationMode` is `Scheduled`.
+</ParamField>
+
+<ParamField path="ReinstallFirmware" type="switch">
+  Force reinstallation of firmware even if the server is already at the target version. Alias: `ForceInstallFirmware`.
+</ParamField>
+
+<ParamField path="Bios" type="switch">
+  Enable BIOS settings management for the profile.
+</ParamField>
+
+<ParamField path="BiosSettings" type="array">
+  Array of BIOS setting objects to apply. Use alongside `-Bios`.
+</ParamField>
+
+<ParamField path="BootMode" type="string" default="BIOS">
+  Server boot mode. Valid values: `UEFI`, `UEFIOptimized`, `BIOS`, `Unmanaged`.
+</ParamField>
+
+<ParamField path="PxeBootPolicy" type="string" default="Auto">
+  PXE boot IP version policy when boot mode is `UEFI` or `UEFIOptimized`. Valid values: `Auto`, `IPv4`, `IPv6`, `IPv4ThenIPv6`, `IPv6ThenIPv4`.
+</ParamField>
+
+<ParamField path="ManageBoot" type="switch">
+  Enable boot order management. Alias: `boot`.
+</ParamField>
+
+<ParamField path="BootOrder" type="array">
+  Ordered array of boot device types, for example `@('PXE', 'HardDisk')`. Requires `-ManageBoot`.
+</ParamField>
+
+<ParamField path="SecureBoot" type="string" default="Unmanaged">
+  Secure Boot state. Valid values: `Unmanaged`, `Enabled`, `Disabled`.
+</ParamField>
+
+<ParamField path="LocalStorage" type="switch">
+  Enable local storage management for the profile.
+</ParamField>
+
+<ParamField path="StorageController" type="object">
+  Storage controller object created by `New-OVServerProfileLogicalDiskController`. Alias: `LogicalDisk`.
+</ParamField>
+
+<ParamField path="ManageIloSettings" type="bool" default="false">
+  Whether to manage iLO settings through the profile.
+</ParamField>
+
+<ParamField path="IloSettings" type="PSCustomObject">
+  iLO settings object to apply when `ManageIloSettings` is `$true`.
+</ParamField>
+
+<ParamField path="SANStorage" type="switch">
+  Enable SAN storage attachment. Requires `-HostOStype` and `-StorageVolume`.
+</ParamField>
+
+<ParamField path="HostOStype" type="string">
+  Host operating system type for SAN storage. Required with `-SANStorage`. Alias: `OS`. Valid values include `VMware`, `Win2k19`, `RHEL`, `SUSE`, and others.
+</ParamField>
+
+<ParamField path="StorageVolume" type="object">
+  Storage volume object (from `Get-OVStorageVolume`) to attach. Required with `-SANStorage`.
+</ParamField>
+
+<ParamField path="EvenPathDisabled" type="switch">
+  Disable even-numbered SAN paths. Alias: `Even`.
+</ParamField>
+
+<ParamField path="OddPathDisabled" type="switch">
+  Disable odd-numbered SAN paths. Alias: `Odd`.
+</ParamField>
+
+<ParamField path="Affinity" type="string" default="Bay">
+  Server affinity setting for blade servers. Valid values: `Bay`, `BayAndServer`.
+</ParamField>
+
+<ParamField path="MacAssignment" type="string" default="Virtual">
+  MAC address assignment method. Valid values: `Virtual`, `Physical`, `UserDefined`.
+</ParamField>
+
+<ParamField path="WwnAssignment" type="string" default="Virtual">
+  WWN assignment method. Valid values: `Virtual`, `Physical`, `UserDefined`.
+</ParamField>
+
+<ParamField path="SnAssignment" type="string" default="Virtual">
+  Serial number assignment method. Valid values: `Virtual`, `Physical`, `UserDefined`.
+</ParamField>
+
+<ParamField path="SerialNumber" type="string">
+  User-defined serial number. Requires `SnAssignment` set to `UserDefined`.
+</ParamField>
+
+<ParamField path="Uuid" type="string">
+  User-defined UUID for the server profile.
+</ParamField>
+
+<ParamField path="HideUnusedFlexNics" type="bool" default="true">
+  Hide unused FlexNIC ports from the operating system. Defaults to `$true`.
+</ParamField>
+
+<ParamField path="Scope" type="HPEOneView.Appliance.ScopeCollection[]">
+  One or more scope objects to assign to the newly created profile.
+</ParamField>
+
+<ParamField path="Async" type="switch">
+  Return a task object immediately without waiting for the operation to complete.
+</ParamField>
+
+<ParamField path="Passthru" type="switch">
+  Return the profile object without sending it to the appliance. Useful for inspecting or further modifying the profile before creation.
+</ParamField>
+
+<ParamField path="Import" type="switch">
+  Import a profile from a previously exported JSON file.
+</ParamField>
+
+<ParamField path="ProfileObj" type="object">
+  Path to a JSON file or a deserialized profile object when using `-Import`. Aliases: `location`, `file`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="object">
+  Specifies the HPE OneView appliance connection to use. Defaults to the default connected session. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+### Create a profile from a template and assign to available server
+
+This example mirrors the pattern used in the Synergy sample script.
+
+```powershell
+# Get the server profile template
+$spt = Get-OVServerProfileTemplate -Name 'Hypervisor Cluster Node Template v1' -ErrorAction Stop
+
+# Find available servers that meet minimum specs
+$SHT = Get-OVServerHardwareType -Name 'SY 480 Gen10 1' -ErrorAction Stop
+$svr = Get-OVServer -ServerHardwareType $SHT -NoProfile |
+    Where-Object { ($_.processorCount * $_.processorCoreCount) -ge 4 -and $_.memoryMb -ge (512 * 1024) } |
+    Select-Object -First 4
+
+# Power servers off before assigning profiles
+$svr | Stop-OVServer -Confirm:$false
+
+# Create profiles from the template
+1..($svr.Count) | ForEach-Object {
+    New-OVServerProfile -Name "Hyp-Clus-0$_" `
+        -AssignmentType Server `
+        -Server $svr[($_ - 1)] `
+        -ServerProfileTemplate $spt `
+        -Async
+}
+
+Get-OVTask -State Running | Wait-OVTaskComplete
+```
+
+### Create a profile from scratch with network connections
+
+```powershell
+$SHT = Get-OVServerHardwareType -Name 'SY 480 Gen10 1' -ErrorAction Stop
+$eg  = Get-OVEnclosureGroup -Name 'DCS Synergy Default EG' -ErrorAction Stop
+
+$con1 = Get-OVNetwork -Name 'Management Network (VLAN1)' |
+    New-OVServerProfileConnection -ConnectionID 1 -Bootable -Priority Primary
+$con2 = Get-OVNetwork -Name 'Management Network (VLAN1)' |
+    New-OVServerProfileConnection -ConnectionID 2
+
+$LogicalDisk  = New-OVServerProfileLogicalDisk -Name 'Boot' -RAID RAID1
+$Controller   = New-OVServerProfileLogicalDiskController -ControllerID Embedded -Mode RAID -Initialize -LogicalDisk $LogicalDisk
+
+$server = Get-OVServer -Name 'Encl1, Bay 1' -ErrorAction Stop
+
+New-OVServerProfile `
+    -Name 'Web-Node-01' `
+    -AssignmentType Server `
+    -Server $server `
+    -ServerHardwareType $SHT `
+    -EnclosureGroup $eg `
+    -Connections $con1, $con2 `
+    -LocalStorage `
+    -StorageController $Controller `
+    -BootMode UEFIOptimized `
+    -ManageBoot `
+    -BootOrder 'HardDisk' `
+    -HideUnusedFlexNics $true | Wait-OVTaskComplete
+```
+
+### Create an unassigned profile for later deployment (rack server)
+
+```powershell
+$DL380SHT = Get-OVServerHardwareType -Name 'DL380 Gen10 Plus' -ErrorAction Stop
+$Baseline  = Get-OVBaseline -FileName 'P45316_001_gen10spp-2021_10_0-SPP2021100_2021_1012_13.iso' -ErrorAction Stop
+
+$LogicalDisk1 = New-OVServerProfileLogicalDisk -Name 'Boot' -RAID RAID1 -DriveType SATASSD -Bootable $true
+$LogicalDisk2 = New-OVServerProfileLogicalDisk -Name 'Data1' -RAID RAID6 -DriveType SAS -NumberofDrives 8
+$Controller   = New-OVServerProfileLogicalDiskController -ControllerID Embedded -Mode RAID -Initialize -LogicalDisk $LogicalDisk1, $LogicalDisk2
+
+New-OVServerProfile `
+    -Name 'Rack-Node-Template' `
+    -AssignmentType Unassigned `
+    -ServerHardwareType $DL380SHT `
+    -Firmware `
+    -Baseline $Baseline `
+    -FirmwareInstallMode FirmwareAndSoftware `
+    -BootMode BIOS `
+    -ManageBoot `
+    -BootOrder 'HardDisk' `
+    -LocalStorage `
+    -StorageController $Controller | Wait-OVTaskComplete
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` — An async task object tracking the profile creation. When `-Passthru` is specified, returns an `HPEOneView.ServerProfile` object without sending to the appliance.
+
+## Related cmdlets
+
+- [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)
+- [Set-OVServerProfile](/cmdlets/server-profiles/set-ovserverprofile)
+- [Remove-OVServerProfile](/cmdlets/server-profiles/remove-ovserverprofile)
+- [Copy-OVServerProfile](/cmdlets/server-profiles/copy-ovserverprofile)
+- [Get-OVServerProfileTemplate](/cmdlets/server-profiles/get-ovserverprofiletemplate)
+- [New-OVServerProfileConnection](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [New-OVServerProfileLogicalDisk](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [New-OVServerProfileLogicalDiskController](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage

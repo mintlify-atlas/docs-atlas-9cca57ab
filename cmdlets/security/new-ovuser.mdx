@@ -1,0 +1,138 @@
+---
+title: "New-OVUser"
+description: "Create a new local user account on an HPE OneView appliance."
+---
+
+## Synopsis
+
+Creates a new local user account with optional role assignments and contact details.
+
+## Syntax
+
+```powershell
+New-OVUser
+    -UserName <String>
+    -Password <String>
+    [-FullName <String>]
+    [-Roles <Array>]
+    [-ScopePermissions <Array>]
+    [-EmailAddress <String>]
+    [-OfficePhone <String>]
+    [-MobilePhone <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVUser` creates a local user account directly on the HPE OneView appliance. The new account is enabled by default. To restrict which resources the user can manage, assign one or more roles using `-Roles` and optionally scope those roles to specific resource collections using `-ScopePermissions`.
+
+Only users with the **Infrastructure administrator** role can create new accounts.
+
+<Note>
+The `-Enabled` parameter accepted in earlier library versions is deprecated. All new accounts are created in an enabled state. Use `Set-OVUser -Disabled` to deactivate an account after creation.
+</Note>
+
+## Parameters
+
+<ParamField path="UserName" type="string" required>
+  The login username for the new account. Must be unique on the appliance.
+</ParamField>
+
+<ParamField path="Password" type="string" required>
+  The initial password for the account. The password is transmitted securely to the appliance.
+</ParamField>
+
+<ParamField path="FullName" type="string">
+  The display name (full name) for the account, used in the UI and audit logs.
+</ParamField>
+
+<ParamField path="Roles" type="Array">
+  One or more role names to assign to the account. Role names are case-insensitive. Valid built-in roles are:
+
+  - `Infrastructure administrator`
+  - `Server administrator`
+  - `Network administrator`
+  - `Storage administrator`
+  - `Read only`
+  - `Backup administrator`
+  - `Scope operator`
+  - `Scope administrator`
+
+  An error is thrown if any supplied role name is not recognized by the appliance.
+</ParamField>
+
+<ParamField path="ScopePermissions" type="Array">
+  An array of hashtables that pair a role name with a scope object (from `Get-OVScope`). Use this to assign a role that applies only within a specific resource scope rather than globally. Each entry must have a `Role` key and a `Scope` key. Pass `'All'` as the scope value to grant global access for that role.
+</ParamField>
+
+<ParamField path="EmailAddress" type="string">
+  A valid email address for the account, used for notifications. Validated as a properly formatted address.
+</ParamField>
+
+<ParamField path="OfficePhone" type="string">
+  The user's office phone number, stored as a contact detail.
+</ParamField>
+
+<ParamField path="MobilePhone" type="string">
+  The user's mobile phone number, stored as a contact detail.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object" default="Default connected session">
+  The appliance connection object or name. Defaults to the default connected session in `$ConnectedSessions`. Accepts an array of connections to create the account on multiple appliances simultaneously. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### Create a server administrator account
+
+```powershell
+New-OVUser `
+    -UserName 'srvadmin' `
+    -Password 'InitialP@ss1' `
+    -FullName 'Server Admin' `
+    -Roles 'Server administrator' `
+    -EmailAddress 'srvadmin@example.com'
+```
+
+Creates `srvadmin` with the Server administrator role and a contact email.
+
+### Create a read-only account
+
+```powershell
+New-OVUser -UserName 'readonly1' -Password 'R3@dOnly!' -Roles 'Read only'
+```
+
+Creates a read-only account with no additional contact information.
+
+### Create an account with scope-restricted permissions
+
+```powershell
+$prodScope = Get-OVScope -Name 'Production'
+
+$permissions = @(
+    @{ Role = 'Server administrator'; Scope = $prodScope }
+)
+
+New-OVUser `
+    -UserName 'prod-admin' `
+    -Password 'Pr0d@dmin1' `
+    -FullName 'Production Admin' `
+    -ScopePermissions $permissions
+```
+
+Creates `prod-admin` whose Server administrator role is restricted to resources in the `Production` scope.
+
+## Output
+
+`HPEOneview.Appliance.User`
+
+Returns the newly created user account object.
+
+## Related cmdlets
+
+- [Get-OVUser](/cmdlets/security/get-ovuser)
+- [Set-OVUser](/cmdlets/security/set-ovuser)
+- [Remove-OVUser](/cmdlets/security/remove-ovuser)
+- [Get-OVRole](/cmdlets/security/get-ovrole)
+- [Get-OVScope](/cmdlets/security/get-ovscope)

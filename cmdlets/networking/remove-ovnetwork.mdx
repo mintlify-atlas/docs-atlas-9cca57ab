@@ -1,0 +1,97 @@
+---
+title: "Remove-OVNetwork"
+description: "Delete one or more network resources from the HPE OneView appliance."
+---
+
+## Synopsis
+
+Deletes one or more Ethernet, Fibre Channel, or FCoE network resources from the connected HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Remove-OVNetwork
+    -InputObject <Object>
+    [-Force]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Remove-OVNetwork` permanently deletes network resources from HPE OneView. The cmdlet raises a confirmation prompt by default because the operation cannot be undone.
+
+<Warning>
+  Removing a network that is currently referenced by a server profile connection, network set, or uplink set will fail unless those associations are removed first.
+</Warning>
+
+Use the `-Force` switch to suppress dependency validation. Pipeline input is supported, making it straightforward to retrieve a collection of networks and delete them in a single expression.
+
+The `-WhatIf` parameter lets you preview which networks would be deleted without committing the operation.
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The network object(s) to delete. Accepts `HPEOneView.Networking.EthernetNetwork`, `HPEOneView.Networking.FibreChannelNetwork`, or `HPEOneView.Networking.FCoENetwork` objects from `Get-OVNetwork`. Supports pipeline input. Also accepts a network URI string or resource name string.
+</ParamField>
+
+<ParamField path="Force" type="Switch">
+  Bypass dependency validation and force deletion. Use with caution — forcibly removing a network that is in use can leave server profile connections in an inconsistent state.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+<ParamField path="WhatIf" type="Switch">
+  Simulate the deletion without making any changes. Displays what would be removed.
+</ParamField>
+
+<ParamField path="Confirm" type="Switch">
+  Prompt for confirmation before each deletion. Enabled by default (`ConfirmImpact = High`).
+</ParamField>
+
+## Examples
+
+### Remove a specific network (with confirmation prompt)
+
+```powershell
+$net = Get-OVNetwork -Name "yellow" -Type Ethernet
+Remove-OVNetwork -InputObject $net
+```
+
+### Remove a network via the pipeline
+
+```powershell
+Get-OVNetwork -Name "black" -Type Ethernet | Remove-OVNetwork
+```
+
+### Remove multiple networks without prompting
+
+```powershell
+Get-OVNetwork -Type Ethernet | Remove-OVNetwork -Confirm:$false
+```
+
+### Preview a deletion without committing
+
+```powershell
+Get-OVNetwork -Name "DirectAttach Fabric A" -Type FibreChannel | Remove-OVNetwork -WhatIf
+```
+
+### Forcibly remove a network
+
+```powershell
+Get-OVNetwork -Name "Production Fabric B" -Type FibreChannel | Remove-OVNetwork -Force -Confirm:$false
+```
+
+## Output
+
+None. A task completion message is written to the host.
+
+## Related cmdlets
+
+- [Get-OVNetwork](/cmdlets/networking/get-ovnetwork)
+- [New-OVNetwork](/cmdlets/networking/new-ovnetwork)
+- [Set-OVNetwork](/cmdlets/networking/set-ovnetwork)

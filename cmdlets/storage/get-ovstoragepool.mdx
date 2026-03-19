@@ -1,0 +1,105 @@
+---
+title: "Get-OVStoragePool"
+description: "Retrieve storage pools (CPGs) from storage systems managed by HPE OneView."
+---
+
+## Synopsis
+
+Retrieves storage pool objects from one or more storage systems managed by HPE OneView.
+
+## Syntax
+
+```powershell
+Get-OVStoragePool
+    [-Name <String>]
+    [-StorageSystem <Object>]
+    [-Managed]
+    [-Unmanaged]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVStoragePool` retrieves Common Provisioning Groups (CPGs) or pools from storage systems that have been registered with HPE OneView. Storage pools must be managed before they can be used to provision volumes.
+
+You can filter results by pool name, parent storage system, management state (`-Managed` or `-Unmanaged`), or resource label. Pass a storage system object from `Get-OVStorageSystem` via the pipeline or the `-StorageSystem` parameter to scope results to that system.
+
+The returned `HPEOneView.Storage.StoragePool` objects can be piped to `New-OVStorageVolume`, `Add-OVStoragePool`, or `Remove-OVStoragePool`.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  Name of the storage pool (CPG) to retrieve. Supports wildcard matching. Aliased as `pool` and `PoolName`.
+</ParamField>
+
+<ParamField path="StorageSystem" type="Object">
+  Filters pools to those belonging to the specified storage system. Accepts a storage system name (`String`) or an `HPEOneView.Storage.System` object from `Get-OVStorageSystem`. Accepts pipeline input. Aliased as `systemName` and `system`.
+</ParamField>
+
+<ParamField path="Managed" type="SwitchParameter">
+  Returns only pools that are currently in a managed state in HPE OneView.
+</ParamField>
+
+<ParamField path="Unmanaged" type="SwitchParameter">
+  Returns only pools that are discovered but not yet managed by HPE OneView.
+</ParamField>
+
+<ParamField path="Label" type="String">
+  Filter results to resources that have this label assigned.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Filter by HPE OneView scope. Defaults to `AllResourcesInScope`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  HPE OneView appliance connection. Defaults to the default connected session. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### List all storage pools
+
+```powershell
+Get-OVStoragePool
+```
+
+### Get a specific pool by name
+
+```powershell
+$StoragePool1 = Get-OVStoragePool -Name FST_CPG1
+```
+
+### Get all pools for a storage system
+
+```powershell
+Get-OVStorageSystem -Name HP3Par_1 | Get-OVStoragePool
+```
+
+### List only managed pools
+
+```powershell
+Get-OVStoragePool -Managed
+```
+
+### Get a pool by name scoped to a specific system
+
+```powershell
+Get-OVStoragePool -Name R1_FC_CPG -StorageSystem HP3Par_2-array.contoso.com
+```
+
+## Output
+
+`HPEOneView.Storage.StoragePool`
+
+Each object includes the pool name, storage system, total and free capacity, provisioned capacity, and management state.
+
+## Related cmdlets
+
+- [Get-OVStorageSystem](/cmdlets/storage/get-ovstoragesystem)
+- [Add-OVStorageSystem](/cmdlets/storage/add-ovstoragesystem)
+- [New-OVStorageVolume](/cmdlets/storage/new-ovstoragevolume)
+- [Get-OVStorageVolumeTemplate](/cmdlets/storage/get-ovstoragevolumetemplate)

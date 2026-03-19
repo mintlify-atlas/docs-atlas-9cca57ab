@@ -1,0 +1,94 @@
+---
+title: "Get-OVStorageVolumeTemplate"
+description: "Retrieve storage volume templates used to standardize and enforce volume provisioning in HPE OneView."
+---
+
+## Synopsis
+
+Retrieves storage volume template objects from HPE OneView.
+
+## Syntax
+
+```powershell
+Get-OVStorageVolumeTemplate
+    [-Name <String>]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVStorageVolumeTemplate` retrieves volume templates that have been defined in HPE OneView. Volume templates capture a set of provisioning defaults — storage pool, capacity, provisioning type, sharing state, compression, and deduplication settings — and allow administrators to enforce consistent volume standards across their environment.
+
+Templates can be used with `New-OVStorageVolume` and `New-OVStorageVolumeTemplate`. If the appliance has the mandatory template policy enabled (see `Set-OVStorageVolumeTemplatePolicy`), all new volumes must be created from a template.
+
+Returned objects carry the `HPEOneView.Storage.VolumeTemplate` type and can be piped to `New-OVStorageVolume`, `Set-OVStorageVolumeTemplate`, or `Remove-OVStorageVolumeTemplate`.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  Name of the volume template to retrieve. Supports wildcard matching. Aliased as `TemplateName`.
+</ParamField>
+
+<ParamField path="Label" type="String">
+  Filter results to templates that have this label assigned.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Filter by HPE OneView scope. Defaults to `AllResourcesInScope`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  HPE OneView appliance connection. Defaults to the default connected session. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### List all volume templates
+
+```powershell
+Get-OVStorageVolumeTemplate
+```
+
+### Get a template by name
+
+```powershell
+$svt = Get-OVStorageVolumeTemplate -Name "Gold-Tier-Template"
+```
+
+### Use a template to create a volume
+
+```powershell
+$svt = Get-OVStorageVolumeTemplate -Name "Gold-Tier-Template"
+
+New-OVStorageVolume -Name "DB-Vol-01" -VolumeTemplate $svt -Capacity 1024
+```
+
+### List templates and display their storage pool associations
+
+```powershell
+Get-OVStorageVolumeTemplate | Select-Object -Property name, storagePoolUri, provisioningType
+```
+
+### Get all templates that have a specific label
+
+```powershell
+Get-OVStorageVolumeTemplate -Label "production"
+```
+
+## Output
+
+`HPEOneView.Storage.VolumeTemplate`
+
+Each object includes the template name, associated storage pool, default capacity, provisioning type, sharing configuration, and compression/deduplication settings.
+
+## Related cmdlets
+
+- [New-OVStorageVolumeTemplate](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [Set-OVStorageVolumeTemplate](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [Remove-OVStorageVolumeTemplate](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [New-OVStorageVolume](/cmdlets/storage/new-ovstoragevolume)
+- [Get-OVStorageVolumeTemplatePolicy](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [Set-OVStorageVolumeTemplatePolicy](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage

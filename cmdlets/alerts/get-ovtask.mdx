@@ -1,0 +1,162 @@
+---
+title: "Get-OVTask"
+description: "Retrieve asynchronous task resources from an HPE OneView appliance, with optional filtering by name, state, associated resource, or resource category."
+---
+
+## Synopsis
+
+Get HPE OneView task objects that track the progress of long-running appliance operations.
+
+## Syntax
+
+### Default
+
+```powershell
+Get-OVTask
+    [-Name <String>]
+    [-InputObject <Object>]
+    [-State <String[]>]
+    [-Count <Int>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### ResourceCategory
+
+```powershell
+Get-OVTask
+    [-Name <String>]
+    [-ResourceCategory <String>]
+    [-State <String[]>]
+    [-Count <Int>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVTask` returns `HPEOneview.Appliance.TaskResource` objects that represent asynchronous operations tracked by HPE OneView. Most resource-modifying cmdlets return a task when the appliance cannot complete the operation synchronously.
+
+Tasks are sorted by last-modified date, most recent first. You can filter by:
+
+- **Name** — the task type name (e.g., `Add server hardware`).
+- **State** — task execution state (Running, Completed, Error, etc.).
+- **InputObject** — a specific resource name, URI, or object.
+- **ResourceCategory** — the REST category string of associated resources (e.g., `server-hardware`).
+- **Count** — a maximum number of records to return.
+
+To block script execution until a task finishes, pipe the result to `Wait-OVTaskComplete`.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+Filter tasks whose `name` property equals this value. The name is the task type description, such as `Add server hardware` or `Update server profile`.
+
+Alias: `-TaskName`
+</ParamField>
+
+<ParamField path="InputObject" type="Object">
+Scope results to tasks associated with a specific resource. Accepts:
+- A resource name string
+- A resource URI string (starting with `/rest/`)
+- A resource object with a `uri` property
+
+Alias: `-Resource`
+</ParamField>
+
+<ParamField path="ResourceCategory" type="String">
+Filter by the REST resource category of the associated resource. Examples: `server-hardware`, `enclosures`, `server-profiles`, `logical-interconnects`.
+
+Alias: `-Category`
+</ParamField>
+
+<ParamField path="State" type="String[]">
+Filter by task execution state. Multiple values can be provided. Valid values:
+- `Unknown`
+- `New`
+- `Running`
+- `Pending`
+- `Stopping`
+- `Suspended`
+- `Terminated`
+- `Killed`
+- `Completed`
+- `Error`
+- `Warning`
+</ParamField>
+
+<ParamField path="Count" type="Int">
+Maximum number of tasks to return. Defaults to 0 (all tasks matching filters). When `-Count` is specified, results are also sorted by creation date descending.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Get all currently running tasks
+
+```powershell
+Get-OVTask -State Running
+```
+
+### Get the 20 most recently completed tasks
+
+```powershell
+Get-OVTask -State Completed -Count 20
+```
+
+### Get tasks associated with a specific server
+
+```powershell
+$server = Get-OVServer -Name 'Encl1, Bay 1'
+Get-OVTask -InputObject $server
+```
+
+### Get all error tasks for server profiles
+
+```powershell
+Get-OVTask -State Error -ResourceCategory server-profiles
+```
+
+### Get tasks by name (task type)
+
+```powershell
+Get-OVTask -Name 'Update server profile'
+```
+
+### Check task state and wait if still running
+
+```powershell
+$task = Get-OVTask -State Running | Select-Object -First 1
+if ($task)
+{
+    $task | Wait-OVTaskComplete
+}
+```
+
+## Output
+
+`HPEOneview.Appliance.TaskResource`
+
+Key properties:
+
+| Property | Type | Description |
+|---|---|---|
+| `name` | String | Task type description |
+| `taskState` | String | Current execution state |
+| `taskStatus` | String | Detailed status message |
+| `percentComplete` | Int | Completion percentage (0–100) |
+| `associatedResource.resourceName` | String | Name of the resource the task operates on |
+| `associatedResource.resourceCategory` | String | Resource category |
+| `created` | DateTime | When the task was created |
+| `modified` | DateTime | When the task was last updated |
+| `uri` | String | URI of the task resource |
+| `isCancelleable` | Boolean | Whether the task can be cancelled with `Stop-OVTask` |
+
+## Related cmdlets
+
+- [Wait-OVTaskComplete](/cmdlets/alerts/wait-ovtaskcomplete)
+- [Stop-OVTask](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [Get-OVAlert](/cmdlets/alerts/get-ovalert)

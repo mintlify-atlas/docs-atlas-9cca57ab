@@ -1,0 +1,79 @@
+---
+title: "Set-OVApplianceDefaultConnection"
+description: "Change which appliance connection is the default for subsequent cmdlets."
+---
+
+## Synopsis
+
+Designate a specific `HPEOneView.Appliance.Connection` as the default connection used by all cmdlets that rely on `$ConnectedSessions`.
+
+## Syntax
+
+```powershell
+Set-OVApplianceDefaultConnection
+    [-ApplianceConnection] <Object>
+    [<CommonParameters>]
+```
+
+## Description
+
+When multiple HPE OneView appliances are connected simultaneously, cmdlets that do not receive an explicit `-ApplianceConnection` argument operate against the **default** connection. `Set-OVApplianceDefaultConnection` lets you switch which connection holds that default status.
+
+The cmdlet:
+
+1. Locates the connection matching the supplied value in `$Global:ConnectedSessions`.
+2. Clears the default flag on whichever connection currently holds it.
+3. Sets the default flag on the targeted connection.
+
+If only one connection exists in `$ConnectedSessions`, the cmdlet issues a warning and ensures that single connection is marked as default rather than performing a switch.
+
+Accepts either an `HPEOneView.Appliance.Connection` object (e.g. from `$ConnectedSessions`) or a name string. Pipeline input is supported.
+
+The cmdlet returns the updated `$Global:ConnectedSessions` collection.
+
+## Parameters
+
+<ParamField path="ApplianceConnection" type="Object" required>
+  The connection to promote to the default. Accepts an `HPEOneView.Appliance.Connection` object or a connection name string. Pipeline input is supported. Accepts the aliases `Appliance` and `Connection`.
+</ParamField>
+
+## Return value
+
+Returns the full `$Global:ConnectedSessions` collection with the updated default flag.
+
+## Examples
+
+### Example 1: Set the default connection by passing a connection object
+
+```powershell
+$cred = Get-Credential
+Connect-OVMgmt -Hostname ov1.example.com -Credential $cred
+$conn2 = Connect-OVMgmt -Hostname ov2.example.com -Credential $cred
+
+# Switch default to the second appliance
+Set-OVApplianceDefaultConnection -ApplianceConnection $conn2
+```
+
+### Example 2: Set the default connection by name string
+
+```powershell
+Set-OVApplianceDefaultConnection -ApplianceConnection 'ov1.example.com'
+```
+
+### Example 3: Select via the pipeline
+
+```powershell
+$ConnectedSessions | Where-Object Name -eq 'ov2.example.com' | Set-OVApplianceDefaultConnection
+```
+
+### Example 4: Interactively choose from connected sessions
+
+```powershell
+$ConnectedSessions | Out-GridView -Title 'Select default connection' -OutputMode Single |
+    Set-OVApplianceDefaultConnection
+```
+
+## Related cmdlets
+
+- [Connect-OVMgmt](./connect-ovmgmt)
+- [Disconnect-OVMgmt](./disconnect-ovmgmt)

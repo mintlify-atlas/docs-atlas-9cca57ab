@@ -1,0 +1,100 @@
+---
+title: "Remove-OVServerProfile"
+description: "Delete one or more server profiles from an HPE OneView appliance."
+---
+
+## Synopsis
+
+Removes server profile resources from an HPE OneView appliance. The server associated with the profile is powered off and the profile is deleted.
+
+## Syntax
+
+```powershell
+Remove-OVServerProfile
+    [-InputObject] <Object>
+    [-RetainStorageConfig]
+    [-Force]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Remove-OVServerProfile` deletes the specified server profile from HPE OneView. If the profile is assigned to a server, the server must be powered off before the profile can be removed.
+
+By default the cmdlet prompts for confirmation before deleting. Pass `-Confirm:$false` to suppress the prompt in automation scripts.
+
+When `-RetainStorageConfig` is specified, any SAN volumes attached through the profile are preserved in HPE OneView rather than being removed with the profile.
+
+The `-Force` switch can remove profiles that are in an error state or that cannot be cleanly deleted through normal means.
+
+<Warning>
+Deleting a server profile is irreversible. The server's hardware identifiers (virtual MACs, WWNs, serial number) assigned by the profile will be released. Ensure the server is powered off and you have a backup or export of the profile before proceeding.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="object" required>
+  The server profile object to remove. Accepts pipeline input. Aliases: `uri`, `name`, `profile`, `ServerProfile`.
+</ParamField>
+
+<ParamField path="RetainStorageConfig" type="switch">
+  Preserve SAN volume attachments in HPE OneView when the profile is removed, rather than deleting them.
+</ParamField>
+
+<ParamField path="Force" type="switch">
+  Force removal of profiles that are in an error state.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="object">
+  Specifies the HPE OneView appliance connection. Defaults to the default connected session. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+### Remove a single profile by name
+
+```powershell
+Get-OVServerProfile -Name 'Web-Node-01' | Remove-OVServerProfile
+```
+
+Prompts for confirmation before deleting the `Web-Node-01` profile.
+
+### Remove a profile without confirmation
+
+```powershell
+Get-OVServerProfile -Name 'Web-Node-01' | Remove-OVServerProfile -Confirm:$false
+```
+
+### Remove all unassigned profiles
+
+```powershell
+Get-OVServerProfile -Unassigned | Remove-OVServerProfile -Confirm:$false
+```
+
+### Remove a profile and retain its SAN volumes
+
+```powershell
+$profile = Get-OVServerProfile -Name 'DB-Node-01'
+Remove-OVServerProfile -InputObject $profile -RetainStorageConfig -Confirm:$false
+```
+
+Deletes the profile but keeps the attached SAN volumes intact in HPE OneView.
+
+### Force-remove a profile stuck in an error state
+
+```powershell
+Get-OVServerProfile -Name 'Broken-Profile' | Remove-OVServerProfile -Force -Confirm:$false
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` — An async task object tracking the delete operation.
+
+## Related cmdlets
+
+- [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)
+- [New-OVServerProfile](/cmdlets/server-profiles/new-ovserverprofile)
+- [Copy-OVServerProfile](/cmdlets/server-profiles/copy-ovserverprofile)

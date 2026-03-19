@@ -1,0 +1,81 @@
+---
+title: "Get-OVVersion"
+description: "Return the HPE OneView PowerShell library version and optionally the appliance API version or check for library updates online."
+---
+
+## Synopsis
+
+Returns the installed HPE OneView PowerShell library version, and optionally queries the connected appliance for its API version or checks GitHub for a newer library release.
+
+## Syntax
+
+```powershell
+Get-OVVersion
+    [-ApplianceVer]
+    [-CheckOnline]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVVersion` returns the `$PSLibraryVersion` object that contains the installed version of the HPE OneView PowerShell Library.
+
+When `-ApplianceVer` is specified, the cmdlet also queries the connected appliance and includes its supported API version information in the output. An active appliance connection is required for this.
+
+When `-CheckOnline` is specified, the cmdlet queries the GitHub releases API to determine whether a newer version of the library is available for the current major/minor release track. If a newer build is found, the user is prompted to open a browser to download the update. This parameter does not require an appliance connection.
+
+## Parameters
+
+<ParamField path="ApplianceVer" type="Switch">
+  When specified, the cmdlet includes the connected appliance's API version information in the output. Requires an active appliance connection.
+</ParamField>
+
+<ParamField path="CheckOnline" type="Switch">
+  When specified, checks GitHub for a newer version of the HPE OneView PowerShell Library matching the current major.minor version track. If an update is found, the user is prompted to open a browser. Does not require an appliance connection.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specifies the HPE OneView appliance connection(s) to use when `-ApplianceVer` is provided. Defaults to the default connection from `${Global:ConnectedSessions}`. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+**Example 1: Return the installed library version**
+
+```powershell
+Get-OVVersion
+```
+
+Outputs the `$PSLibraryVersion` object with the installed library version details.
+
+**Example 2: Include appliance API version**
+
+```powershell
+Get-OVVersion -ApplianceVer
+```
+
+Returns the library version and the API version supported by the connected appliance.
+
+**Example 3: Check online for a newer library release**
+
+```powershell
+Get-OVVersion -CheckOnline
+```
+
+Queries GitHub and prompts the user to download a newer library version if one exists. If the library is up to date, the version object is returned with `UpdateAvailable = False`.
+
+## Output
+
+`PSCustomObject` (`$PSLibraryVersion`)
+
+The returned object includes:
+
+| Property | Description |
+|---|---|
+| `LibraryVersion` | The installed library version as a `[Version]` object |
+| `Major` | Major version number |
+| `Minor` | Minor version number |
+| `UpdateAvailable` | `True`/`False` — populated when `-CheckOnline` is used |
+
+When `-ApplianceVer` is used, the appliance API version details are included in the output.

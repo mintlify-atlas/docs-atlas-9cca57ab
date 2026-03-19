@@ -1,0 +1,167 @@
+---
+title: "Set-OVUser"
+description: "Modify an existing local user account on an HPE OneView appliance."
+---
+
+## Synopsis
+
+Updates the properties of an existing local user account, including password, roles, contact information, and account state.
+
+## Syntax
+
+**By username:**
+
+```powershell
+Set-OVUser
+    -UserName <String>
+    [-Password <String>]
+    [-FullName <String>]
+    [-Roles <Array>]
+    [-Append]
+    [-ScopePermissions <Array>]
+    [-EmailAddress <String>]
+    [-OfficePhone <String>]
+    [-MobilePhone <String>]
+    [-Enabled]
+    [-Disabled]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**By pipeline (user object):**
+
+```powershell
+Get-OVUser -Name <String> | Set-OVUser
+    [-Password <String>]
+    [-FullName <String>]
+    [-Roles <Array>]
+    [-Append]
+    [-ScopePermissions <Array>]
+    [-EmailAddress <String>]
+    [-OfficePhone <String>]
+    [-MobilePhone <String>]
+    [-Enabled]
+    [-Disabled]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVUser` updates one or more properties on an existing local user account. Provide either the username string with `-UserName` or pipe a user object retrieved from `Get-OVUser`.
+
+When `-Roles` is supplied without `-Append`, the existing role assignments are **replaced** with the new list. Use `-Append` to add roles to the current set without removing any.
+
+You cannot modify the password or roles of your own currently authenticated account with this cmdlet. Use `Set-OVUserPassword` to change your own password.
+
+## Parameters
+
+<ParamField path="UserObject" type="Object">
+  A user account object returned by `Get-OVUser`, accepted from the pipeline. Use this parameter set to update a user by object reference rather than by name.
+</ParamField>
+
+<ParamField path="UserName" type="string">
+  The login username of the account to modify. Required when not using pipeline input.
+</ParamField>
+
+<ParamField path="Password" type="string">
+  The new password for the account. Has no effect on the currently authenticated user's account.
+</ParamField>
+
+<ParamField path="FullName" type="string">
+  The updated display name for the account.
+</ParamField>
+
+<ParamField path="Roles" type="Array">
+  One or more role names to assign. Replaces existing roles unless `-Append` is also specified. Has no effect on the currently authenticated user's account. See [New-OVUser](/cmdlets/security/new-ovuser) for the list of valid built-in role names.
+</ParamField>
+
+<ParamField path="Append" type="switch">
+  When specified with `-Roles`, adds the supplied roles to the account's existing role set instead of replacing them.
+</ParamField>
+
+<ParamField path="ScopePermissions" type="Array">
+  An array of hashtables pairing a role name with a scope object. Replaces the existing scope-based permissions. Each entry must have a `Role` key and a `Scope` key.
+</ParamField>
+
+<ParamField path="EmailAddress" type="string">
+  The updated email address for the account. Must be a valid email format.
+</ParamField>
+
+<ParamField path="OfficePhone" type="string">
+  The updated office phone number.
+</ParamField>
+
+<ParamField path="MobilePhone" type="string">
+  The updated mobile phone number.
+</ParamField>
+
+<ParamField path="Enabled" type="switch">
+  Enables a previously disabled account. Aliased as `enable`.
+</ParamField>
+
+<ParamField path="Disabled" type="switch">
+  Disables the account, preventing login without deleting it. Aliased as `disable`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object" default="Default connected session">
+  The appliance connection object or name. Defaults to the default connected session. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### Update a user's password
+
+```powershell
+Set-OVUser -UserName 'jsmith' -Password 'NewS3cur3P@ss!'
+```
+
+Changes the password for the `jsmith` account.
+
+### Replace a user's role assignments
+
+```powershell
+Set-OVUser -UserName 'jsmith' -Roles 'Network administrator', 'Read only'
+```
+
+Replaces all existing roles on `jsmith` with Network administrator and Read only.
+
+### Append an additional role without removing existing ones
+
+```powershell
+Set-OVUser -UserName 'jsmith' -Roles 'Storage administrator' -Append
+```
+
+Adds the Storage administrator role to whatever roles `jsmith` already holds.
+
+### Disable an account via pipeline
+
+```powershell
+Get-OVUser -Name 'contractor1' | Set-OVUser -Disabled
+```
+
+Retrieves the `contractor1` account and disables it.
+
+### Update contact details
+
+```powershell
+Set-OVUser -UserName 'jsmith' `
+    -FullName 'Jane Smith' `
+    -EmailAddress 'jane.smith@example.com' `
+    -OfficePhone '+1-555-0100'
+```
+
+Updates the display name, email, and office phone for `jsmith`.
+
+## Output
+
+`HPEOneview.Appliance.User`
+
+Returns the updated user account object.
+
+## Related cmdlets
+
+- [Get-OVUser](/cmdlets/security/get-ovuser)
+- [New-OVUser](/cmdlets/security/new-ovuser)
+- [Remove-OVUser](/cmdlets/security/remove-ovuser)
+- [Get-OVRole](/cmdlets/security/get-ovrole)

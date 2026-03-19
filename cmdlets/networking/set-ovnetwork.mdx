@@ -1,0 +1,157 @@
+---
+title: "Set-OVNetwork"
+description: "Modify the properties of an existing Ethernet or Fibre Channel network resource."
+---
+
+## Synopsis
+
+Modifies an existing Ethernet or Fibre Channel network resource on the connected HPE OneView appliance.
+
+## Syntax
+
+### Ethernet network
+
+```powershell
+Set-OVNetwork
+    -InputObject <Object>
+    [-Name <String>]
+    [-Prefix <String>]
+    [-Suffix <String>]
+    [-Purpose <String>]
+    [-Smartlink <Boolean>]
+    [-PrivateNetwork <Boolean>]
+    [-TypicalBandwidth <Int32>]
+    [-MaximumBandwidth <Int32>]
+    [-IPv4Subnet <Object>]
+    [-IPv6Subnet <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Fibre Channel network
+
+```powershell
+Set-OVNetwork
+    -InputObject <Object>
+    [-Name <String>]
+    [-Prefix <String>]
+    [-Suffix <String>]
+    [-TypicalBandwidth <Int32>]
+    [-MaximumBandwidth <Int32>]
+    [-LinkStabilityTime <Int32>]
+    [-AutoLoginRedistribution <Boolean>]
+    [-ManagedSan <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVNetwork` updates properties on one or more existing network resources. Pass a network object via the pipeline or the `-InputObject` parameter. When modifying multiple networks at once (for example, after retrieving a collection with `Get-OVNetwork`), use `-Prefix` or `-Suffix` to apply a consistent name change across all objects.
+
+Bandwidth changes take effect immediately. Changes to SmartLink or PrivateNetwork settings are applied without disruption to connected servers.
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The network object to modify. Accepts `HPEOneView.Networking.EthernetNetwork` or `HPEOneView.Networking.FibreChannelNetwork` objects, typically from `Get-OVNetwork`. Supports pipeline input.
+</ParamField>
+
+<ParamField path="Name" type="String">
+  A new name for the network resource.
+</ParamField>
+
+<ParamField path="Prefix" type="String">
+  A string to prepend to the existing network name. Useful when modifying a collection of networks.
+</ParamField>
+
+<ParamField path="Suffix" type="String">
+  A string to append to the existing network name. Useful when modifying a collection of networks.
+</ParamField>
+
+<ParamField path="Purpose" type="String">
+  Updates the intended use of an Ethernet network. Accepted values: `General`, `Management`, `VMMigration`, `FaultTolerance`, `ISCSI`.
+</ParamField>
+
+<ParamField path="Smartlink" type="Boolean">
+  When `$true`, the network propagates link state to server adapters. Applies to Ethernet networks only.
+</ParamField>
+
+<ParamField path="PrivateNetwork" type="Boolean">
+  When `$true`, prevents inter-server communication on this network. Applies to Ethernet networks only.
+</ParamField>
+
+<ParamField path="TypicalBandwidth" type="Int32">
+  The preferred bandwidth allocation, in Mb/s. Valid range: 2–50000.
+</ParamField>
+
+<ParamField path="MaximumBandwidth" type="Int32">
+  The maximum bandwidth allocation, in Mb/s. Valid range: 100–50000.
+</ParamField>
+
+<ParamField path="IPv4Subnet" type="Object">
+  An IPv4 subnet object to associate with an Ethernet network.
+</ParamField>
+
+<ParamField path="IPv6Subnet" type="Object">
+  An IPv6 subnet object to associate with an Ethernet network.
+</ParamField>
+
+<ParamField path="LinkStabilityTime" type="Int32">
+  Seconds to wait after link restoration before redistributing FC logins. Valid range: 1–1800. Applies to FC networks only.
+</ParamField>
+
+<ParamField path="AutoLoginRedistribution" type="Boolean">
+  When `$true`, automatically redistributes FC logins after a link is restored. Applies to FC networks only.
+</ParamField>
+
+<ParamField path="ManagedSan" type="Object">
+  A managed SAN object to associate with a Fibre Channel network.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Update bandwidth settings on a single network
+
+```powershell
+$net = Get-OVNetwork -Name "Production Fabric A" -Type FibreChannel
+Set-OVNetwork -InputObject $net -TypicalBandwidth 8000 -MaximumBandwidth 20000
+```
+
+### Update bandwidth via the pipeline
+
+```powershell
+Get-OVNetwork -Name "blue" -Type Ethernet | Set-OVNetwork -TypicalBandwidth 5000 -MaximumBandwidth 10000
+```
+
+### Rename a network and enable SmartLink
+
+```powershell
+Get-OVNetwork -Name "green" -Type Ethernet | Set-OVNetwork -Name "Production-Green" -Smartlink $true
+```
+
+### Add a suffix to all Ethernet networks matching a pattern
+
+```powershell
+Get-OVNetwork -Name "Prod Vlan *" -Type Ethernet | Set-OVNetwork -Suffix "-Prod"
+```
+
+### Change the purpose of a management network
+
+```powershell
+Get-OVNetwork -Name "Mgmt" -Type Ethernet | Set-OVNetwork -Purpose Management
+```
+
+## Output
+
+The updated network object: `HPEOneView.Networking.EthernetNetwork` or `HPEOneView.Networking.FibreChannelNetwork`.
+
+## Related cmdlets
+
+- [Get-OVNetwork](/cmdlets/networking/get-ovnetwork)
+- [New-OVNetwork](/cmdlets/networking/new-ovnetwork)
+- [Remove-OVNetwork](/cmdlets/networking/remove-ovnetwork)

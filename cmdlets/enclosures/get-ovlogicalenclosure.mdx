@@ -1,0 +1,125 @@
+---
+title: "Get-OVLogicalEnclosure"
+description: "Retrieve logical enclosure objects that represent the software-defined view of HPE Synergy frames."
+---
+
+## Synopsis
+
+Retrieve one or more logical enclosure objects from the HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVLogicalEnclosure
+    [-Name <String>]
+    [-EnclosureGroup <Object>]
+    [-NonCompliant]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVLogicalEnclosure` retrieves logical enclosure objects from HPE OneView. A logical enclosure is the software-defined representation of one or more HPE Synergy frames that are managed as a single unit under a shared enclosure group.
+
+**Logical enclosure vs. physical enclosure**
+
+| Concept | Cmdlet | Description |
+|---|---|---|
+| Physical enclosure | `Get-OVEnclosure` | The physical chassis hardware — the frame itself. |
+| Logical enclosure | `Get-OVLogicalEnclosure` | The software policy layer applied to one or more frames, tied to an enclosure group. |
+
+When HPE Synergy frames are discovered by the Composer appliance, a logical enclosure is automatically created from the enclosure group configuration. Changes to the logical enclosure (such as firmware updates and configuration compliance) are managed at this layer.
+
+<Note>
+Logical enclosures are a concept exclusive to **HPE Synergy**. HPE BladeSystem c-Class enclosures managed by OneView do not have a separate logical enclosure layer.
+</Note>
+
+Use `-EnclosureGroup` to filter by the associated enclosure group. Use `-NonCompliant` to return only logical enclosures whose current state does not match their enclosure group configuration.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name (or wildcard pattern) of the logical enclosure to retrieve.
+</ParamField>
+
+<ParamField path="EnclosureGroup" type="Object">
+  Filters results to logical enclosures associated with the specified enclosure group. Accepts a name (string) or an enclosure group object from `Get-OVEnclosureGroup`. Accepts pipeline input.
+</ParamField>
+
+<ParamField path="NonCompliant" type="SwitchParameter">
+  Returns only logical enclosures that are out of compliance with their enclosure group definition. Useful for identifying frames that require a configuration update.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Filters results to resources within the specified scope. Defaults to `AllResourcesInScope`, which returns all resources accessible to the current user's active permissions.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The HPE OneView appliance connection. Defaults to the current default session.
+</ParamField>
+
+## Examples
+
+### Example 1: List all logical enclosures
+
+Return all logical enclosures from the connected appliance.
+
+```powershell
+Get-OVLogicalEnclosure
+```
+
+```
+Name                Status  EnclosureGroupName    FrameCount  ComplianceState
+----                ------  ------------------    ----------  ---------------
+SYN-LogEnc-1        OK      Synergy Default EG    3           Consistent
+SYN-LogEnc-Dev      Warning Synergy Dev EG        1           Inconsistent
+```
+
+### Example 2: Get a specific logical enclosure
+
+Retrieve a single logical enclosure by name.
+
+```powershell
+$LogEnc = Get-OVLogicalEnclosure -Name "SYN-LogEnc-1"
+```
+
+### Example 3: Filter by enclosure group
+
+Return all logical enclosures associated with a specific enclosure group.
+
+```powershell
+$EG = Get-OVEnclosureGroup -Name "Synergy Default EG"
+$EG | Get-OVLogicalEnclosure
+```
+
+### Example 4: Find non-compliant logical enclosures
+
+Return logical enclosures that have drifted from their enclosure group definition.
+
+```powershell
+Get-OVLogicalEnclosure -NonCompliant
+```
+
+### Example 5: Trigger an update on non-compliant enclosures
+
+Find non-compliant logical enclosures and update them to bring them back into compliance.
+
+```powershell
+Get-OVLogicalEnclosure -NonCompliant | Update-OVLogicalEnclosure
+```
+
+## Output
+
+Returns one or more `HPEOneView.LogicalEnclosure` objects. Key properties include `name`, `state`, `complianceState`, `enclosureGroupUri`, `enclosureUris`, and `uri`.
+
+Returns an empty collection when no matching resources are found.
+
+## Related cmdlets
+
+- `Get-OVEnclosure` — Retrieve the underlying physical enclosure (frame) objects.
+- `Get-OVEnclosureGroup` — Retrieve enclosure group templates.
+- `New-OVLogicalEnclosure` — Create a logical enclosure for Synergy frames.
+- `Update-OVLogicalEnclosure` — Update or re-apply the enclosure group configuration.
+- `Remove-OVLogicalEnclosure` — Delete a logical enclosure.

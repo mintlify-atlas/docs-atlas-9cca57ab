@@ -1,0 +1,96 @@
+---
+title: "New-OVScope"
+description: "Create a new scope for granular resource access control in HPE OneView."
+---
+
+## Synopsis
+
+Creates a new, empty scope on an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+New-OVScope
+    -Name <String>
+    [-Description <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVScope` creates a named scope resource on the appliance. Scopes act as resource collections that can be associated with user role assignments to restrict which resources those roles apply to.
+
+After creating a scope with this cmdlet, use `Add-OVResourceToScope` to populate it with server hardware, networks, enclosures, or other supported resource types.
+
+Only users with the **Infrastructure administrator** role can create scopes.
+
+## Parameters
+
+<ParamField path="Name" type="string" required>
+  A unique name for the new scope.
+</ParamField>
+
+<ParamField path="Description" type="string">
+  An optional description for the scope, used for documentation purposes in the UI.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object" default="Default connected session">
+  The appliance connection object or name. Defaults to the default connected session in `$ConnectedSessions`. Accepts an array of connections to create the scope on multiple appliances. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### Create a scope with a description
+
+```powershell
+New-OVScope -Name 'Production' -Description 'Resources used in the production environment'
+```
+
+Creates an empty scope named `Production`.
+
+### Create a scope and add resources to it
+
+```powershell
+# Create the scope
+$scope = New-OVScope -Name 'Production' -Description 'Production environment resources'
+
+# Retrieve resources to add
+$servers = Get-OVServer -Name 'Prod*'
+$networks = Get-OVNetwork -Name 'Prod-*'
+
+# Add resources to the scope
+Add-OVResourceToScope -Scope $scope -InputObject $servers
+Add-OVResourceToScope -Scope $scope -InputObject $networks
+```
+
+Creates the `Production` scope, then adds matching server and network resources.
+
+### Create a scope and assign it to a user permission
+
+```powershell
+$scope = New-OVScope -Name 'Lab'
+
+$permissions = @(
+    @{ Role = 'Server administrator'; Scope = $scope }
+)
+
+New-OVUser `
+    -UserName 'lab-admin' `
+    -Password 'L@b@dmin1' `
+    -ScopePermissions $permissions
+```
+
+Creates the `Lab` scope and immediately uses it to constrain a new user's Server administrator permissions.
+
+## Output
+
+`HPEOneView.Appliance.ScopeCollection`
+
+Returns the newly created scope object.
+
+## Related cmdlets
+
+- [Get-OVScope](/cmdlets/security/get-ovscope)
+- [New-OVUser](/cmdlets/security/new-ovuser)
+- [Set-OVUser](/cmdlets/security/set-ovuser)

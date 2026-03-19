@@ -1,0 +1,145 @@
+---
+title: "Add-OVServer"
+description: "Import a rack-mount or blade server into HPE OneView as a managed or monitored resource."
+---
+
+## Synopsis
+
+Adds a ProLiant server to HPE OneView for full management or monitoring-only access.
+
+## Syntax
+
+**Managed server (default)**
+
+```powershell
+Add-OVServer
+    -Hostname <String>
+    [-Credential <PSCredential>]
+    [-LicensingIntent <String>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**Monitored server**
+
+```powershell
+Add-OVServer
+    -Hostname <String>
+    -Monitored
+    [-Credential <PSCredential>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Add-OVServer` imports a rack-mount or blade server into HPE OneView by communicating with its iLO management processor. Two modes are supported:
+
+- **Managed**: HPE OneView takes full control, applying firmware policies, server profiles, and compliance monitoring. Requires an `OneView` or `OneViewNoiLO` license.
+- **Monitored**: HPE OneView receives health and alert data from the iLO, but does not apply profiles or firmware. No HPE OneView license is consumed.
+
+The `-Credential` parameter accepts a `PSCredential` object containing the iLO administrator credentials. The deprecated `-Username` and `-Password` parameters are still accepted but will generate a warning.
+
+For bulk imports, use `-Async` to submit all requests concurrently and collect the returned task objects for later status checking. The appliance supports up to 64 concurrent async tasks.
+
+<Warning>
+Adding a server as **managed** gives HPE OneView control over its configuration. Any existing iLO settings outside of HPE OneView management may be overwritten when a server profile is assigned.
+</Warning>
+
+## Parameters
+
+<ParamField path="Hostname" type="String" required>
+  The iLO IP address or FQDN of the server to add.
+</ParamField>
+
+<ParamField path="Credential" type="PSCredential">
+  A `PSCredential` object containing the iLO administrator username and password. Preferred over the deprecated `-Username`/`-Password` parameters.
+</ParamField>
+
+<ParamField path="LicensingIntent" type="String">
+  The licensing mode to apply when adding a managed server. Valid values:
+  - `OneView` (default) — full HPE OneView management with iLO Advanced license
+  - `OneViewNoiLO` — HPE OneView management without consuming an iLO Advanced license
+</ParamField>
+
+<ParamField path="Monitored" type="Switch">
+  Add the server in monitoring-only mode. When specified, the server is not managed by HPE OneView and no HPE OneView license is consumed.
+</ParamField>
+
+<ParamField path="Scope" type="HPEOneView.Appliance.ScopeCollection[]">
+  One or more scope objects to assign to the server resource on import.
+</ParamField>
+
+<ParamField path="Async" type="Switch">
+  Return the async task object immediately without waiting for the operation to complete. Use `Wait-OVTaskComplete` to monitor the task.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Add a managed server
+
+```powershell
+$cred = Get-Credential -UserName Administrator -Message "Enter iLO credentials"
+Add-OVServer -Hostname "192.168.1.100" -Credential $cred -LicensingIntent OneView
+```
+
+Adds the server at `192.168.1.100` as a fully managed resource and waits for the operation to complete.
+
+### Add a monitored server
+
+```powershell
+$cred = Get-Credential -UserName Administrator -Message "Enter iLO credentials"
+Add-OVServer -Hostname "ilo.server.lab" -Credential $cred -Monitored
+```
+
+Adds the server in monitoring-only mode. HPE OneView receives health alerts but does not manage the server configuration.
+
+### Bulk import from a CSV file (async)
+
+The following pattern is adapted from `AddServers_Monitored_Sample.ps1`:
+
+```powershell
+# CSV columns: hostname, account, password
+$ServersList = Import-Csv -Path ".\servers.csv"
+$AsyncTasks  = [System.Collections.ArrayList]::new()
+
+foreach ($entry in $ServersList) {
+    $cred = [PSCredential]::new(
+        $entry.account,
+        (ConvertTo-SecureString $entry.password -AsPlainText -Force)
+    )
+    $task = Add-OVServer -Hostname $entry.hostname -Credential $cred -Monitored -Async
+    [void]$AsyncTasks.Add($task)
+}
+
+# Check final status of all tasks
+$AsyncTasks | ForEach-Object { Send-OVRequest $_.uri } | Sort-Object status -Descending | Format-Table
+```
+
+### Add a managed server without iLO Advanced license
+
+```powershell
+$cred = Get-Credential
+Add-OVServer -Hostname "dl380.lab.local" -Credential $cred -LicensingIntent OneViewNoiLO
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+The cmdlet returns an async task resource. When the task completes successfully, the resulting server hardware object is available at the task's `associatedResource` property. Use `Wait-OVTaskComplete` to block until the task finishes.
+
+## Related cmdlets
+
+- [Get-OVServer](/cmdlets/server/get-ovserver)
+- [Remove-OVServer](/cmdlets/server/remove-ovserver)
+- [Update-OVServer](/cmdlets/server/update-ovserver)
+- [Get-OVIloSso](/cmdlets/server/get-ovilosso)

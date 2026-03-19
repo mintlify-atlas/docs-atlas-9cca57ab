@@ -1,0 +1,104 @@
+---
+title: "Remove-OVAlert"
+description: "Permanently delete an alert resource from an HPE OneView appliance."
+---
+
+## Synopsis
+
+Permanently remove an HPE OneView alert.
+
+## Syntax
+
+```powershell
+Remove-OVAlert
+    -InputObject <Object>
+    [-Force]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Remove-OVAlert` permanently deletes an alert from the HPE OneView appliance. This operation is irreversible.
+
+The cmdlet prompts for confirmation before deleting. Use `-Confirm:$false` to suppress the prompt in automation scripts. Use `-WhatIf` to preview which alerts would be deleted without making any changes.
+
+If the alert cannot be deleted because it is locked or in a protected state, pass `-Force` to override.
+
+<Warning>
+`Clear-OVAlert` is deprecated and maps to `Set-OVAlert`. To **acknowledge** an alert without permanently removing it, use `Set-OVAlert -Cleared`. To **permanently delete** an alert, use `Remove-OVAlert`.
+</Warning>
+
+<Info>
+To clear (acknowledge) all active alerts, pipe the output of `Get-OVAlert -AlertState Active` to `Set-OVAlert -Cleared`. Use `Remove-OVAlert` only when you want to fully purge the record.
+</Info>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+The alert object to delete. Must be an `HPEOneView.Alert` object. Can be provided via the pipeline.
+</ParamField>
+
+<ParamField path="Force" type="SwitchParameter">
+Override deletion restrictions. Appends `?force=true` to the DELETE request. Use when the normal delete is rejected due to a locked alert state.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+<ParamField path="WhatIf" type="SwitchParameter">
+Preview the deletion without actually removing any alerts.
+</ParamField>
+
+<ParamField path="Confirm" type="SwitchParameter">
+Prompt for confirmation before each deletion. Enabled by default; pass `-Confirm:$false` to suppress.
+</ParamField>
+
+## Examples
+
+### Remove a specific alert
+
+```powershell
+$alert = Get-OVAlert -AlertState Active | Where-Object description -match 'Temperature exceeded'
+Remove-OVAlert -InputObject $alert
+```
+
+### Remove all cleared alerts without confirmation
+
+```powershell
+Get-OVAlert -AlertState Cleared | Remove-OVAlert -Confirm:$false
+```
+
+### Preview which alerts would be deleted
+
+```powershell
+Get-OVAlert -AlertState Cleared -TimeSpan ([TimeSpan]::FromDays(30)) | Remove-OVAlert -WhatIf
+```
+
+### Force-remove a locked alert
+
+```powershell
+$alert = Get-OVAlert | Where-Object alertState -eq 'Locked' | Select-Object -First 1
+Remove-OVAlert -InputObject $alert -Force
+```
+
+### Acknowledge (clear) all active alerts without deleting them
+
+```powershell
+# Use Set-OVAlert to acknowledge rather than delete
+Get-OVAlert -AlertState Active | ForEach-Object {
+    Set-OVAlert -InputObject $_ -Cleared
+}
+```
+
+## Output
+
+No output on success. If `-WhatIf` is used, the cmdlet reports which alerts would be removed.
+
+## Related cmdlets
+
+- [Get-OVAlert](/cmdlets/alerts/get-ovalert)
+- [Set-OVAlert](/cmdlets/alerts/set-ovalert)

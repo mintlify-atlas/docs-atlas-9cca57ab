@@ -1,0 +1,71 @@
+---
+title: "Get-OVApplianceDateTime"
+description: "Retrieve the current date, time, timezone, and NTP configuration from the HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves the current date and time settings, timezone, locale, and NTP server configuration from the HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVApplianceDateTime
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVApplianceDateTime` queries the appliance for its current date/time configuration. The returned object includes the current timestamp, the configured timezone, the display locale, the list of configured NTP servers, the NTP polling interval, and whether the appliance is set to synchronize time with the hypervisor host.
+
+The cmdlet returns a strongly typed `HPEOneView.Appliance.ApplianceLocaleDateTime` object for each appliance connection processed.
+
+## Parameters
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specifies the HPE OneView appliance connection(s) to query. Defaults to the default connection from `${Global:ConnectedSessions}`. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+**Example 1: Get date/time settings from the default appliance**
+
+```powershell
+Get-OVApplianceDateTime
+```
+
+Returns the date/time configuration for the default connected appliance.
+
+**Example 2: Get date/time settings from multiple appliances**
+
+```powershell
+$Connections = ${Global:ConnectedSessions}
+Get-OVApplianceDateTime -ApplianceConnection $Connections
+```
+
+Retrieves date/time configuration from all active appliance connections.
+
+**Example 3: Display NTP servers for the appliance**
+
+```powershell
+(Get-OVApplianceDateTime).NtpServers
+```
+
+Returns only the NTP server list from the appliance's date/time configuration.
+
+## Output
+
+`HPEOneView.Appliance.ApplianceLocaleDateTime`
+
+An object containing the following properties:
+
+| Property | Description |
+|---|---|
+| `Locale` | Locale code (e.g. `en_US`) |
+| `Timezone` | IANA timezone string (e.g. `UTC`) |
+| `DateTime` | Current appliance date and time |
+| `NtpServers` | Array of configured NTP server addresses |
+| `PollingInterval` | NTP polling interval in seconds |
+| `SyncWithHost` | `True` if syncing from the hypervisor host clock |
+| `LocaleDisplayName` | Human-readable locale name |

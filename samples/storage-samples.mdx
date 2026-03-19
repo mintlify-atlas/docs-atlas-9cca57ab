@@ -1,0 +1,279 @@
+---
+title: Storage Samples
+description: Add HPE Primera or 3PAR storage arrays, create storage pools and volumes, and attach SAN volumes to Server Profiles using POSH-HPEOneView sample scripts.
+---
+
+Two sample scripts cover storage automation:
+
+| Script | Purpose |
+|---|---|
+| `AddStorageSystem_Sample.ps1` | Add storage arrays, configure port/pool mappings, create private and shared volumes |
+| `Server_Multiconnection_SAN_Storage_Sample.ps1` | Create a Server Profile with FC connections and attach existing SAN volumes |
+
+---
+
+## AddStorageSystem_Sample.ps1
+
+This script demonstrates adding multiple storage systems and provisioning volumes from their storage pools.
+
+### Connect to the appliance
+
+```powershell
+if (-not $ConnectedSessions)
+{
+    $Appliance  = Read-Host 'ApplianceName'
+    $Credential = Get-Credential -UserName Administrator -Message Password
+    $ApplianceConnection = Connect-OVMgmt -Hostname $Appliance -Credential $Credential
+}
+```
+
+### Add a storage system with port and port group mappings
+
+Port mappings tell OneView which SAN fabric each storage port belongs to. Port groups aggregate ports that share zoning.
+
+```powershell
+$myStorageSystem      = "HPEStoreServ_1-array.contoso.com"
+$myStorageSystemCreds = Get-Credential -Username 3paradm -Message "3Paradm password"
+
+$params = @{
+    hostname   = $myStorageSystem
+    credential = $myStorageSystemCreds
+    domain     = "NODOMAIN"
+    Ports = @{
+        "0:1:1" = "3PAR SAN DA A"     # port -> FC network name in OneView
+        "0:1:2" = "3PAR SAN Fabric A"
+        "1:1:1" = "3PAR SAN Fabric B"
+        "1:1:2" = "3PAR SAN DA B"
+    }
+    PortGroups = @{
+        "0:1:1" = "PG_1"
+        "0:1:2" = "PG_2"
+        "1:1:1" = "PG_1"
+        "1:1:2" = "PG_2"
+    }
+}
+
+"Importing POD storage array: {0}" -f $params.hostname | Write-Host
+
+Add-OVStorageSystem @params | Wait-OVTaskComplete
+Add-OVStoragePool HP-P7400-1 -poolName R1_FC_CPG | Wait-OVTaskComplete
+```
+
+<Note>
+The `domain` value `"NODOMAIN"` is used when the array is not in a Virtual Domain. For arrays with Virtual Domains, replace this with the exact (case-sensitive) domain name.
+</Note>
+
+### Add a second storage array using username/password
+
+When `Get-Credential` is not practical (e.g. unattended scripts), the `username` and `password` parameters can be used directly:
+
+```powershell
+$myStorageSystem       = "HP3Par_2-array.contoso.com"
+$myStorageSystemAdmin  = "3paradm"
+$myStorageSystemPass   = "3pardata"
+$myStorageSystemDomain = "VirtualDomain1"  # Case-sensitive
+
+$myStorageSystemPorts = @{
+    "1:1:1" = "Fabric A"
+    "2:1:1" = "FabricA"
+    "1:1:2" = "Fabric B"
+    "2:1:2" = "Fabric B"
+}
+
+$myStorageSystemPG = @{
+    "0:1:1" = "PG_1"
+    "0:1:2" = "PG_2"
+    "1:1:1" = "PG_1"
+    "1:1:2" = "PG_2"
+}
+
+$params = @{
+    hostname   = $myStorageSystem
+    username   = $myStorageSystemAdmin
+    password   = $myStorageSystemPass
+    domain     = $myStorageSystemDomain
+    Ports      = $myStorageSystemPorts
+    PortGroups = $myStorageSystemPG
+}
+
+Add-OVStorageSystem @params | Wait-OVTaskComplete
+Add-OVStoragePool -StorageSystem $myStorageSystem -PoolName R1_FC_CPG | Wait-OVTaskComplete
+```
+
+### Inspect imported arrays
+
+```powershell
+Get-OVStorageSystem
+
+$myStorageSystem1 = Get-OVStorageSystem -Name HP3Par_1
+$myStorageSystem2 = Get-OVStorageSystem -Name HP3Par_2
+```
+
+### Add storage pools
+
+Storage pools (Common Provisioning Groups on HPE Primera/3PAR) must be added to OneView before volumes can be created from them.
+
+```powershell
+# Add two pools from system 1
+$myStorageSystem1 | New-OVStoragePool -PoolName "FST_CPG1"
+$myStorageSystem1 | New-OVStoragePool -PoolName "FST_CPG2"
+
+# Add multiple pools from system 2 using an array
+$myPools = @("FST_CPG3", "FST_CPG4")
+$myStorageSystem2 | New-OVStoragePool -PoolName $myPools
+
+Get-OVStoragePool
+```
+
+### Create private volumes
+
+Private volumes are assigned to exactly one server profile. The script creates 10 × 60 GB volumes:
+
+```powershell
+$StoragePool1 = Get-OVStoragePool -Name FST_CPG1
+
+1..10 | ForEach-Object {
+    New-OVStorageVolume -name "Vol$_" -Pool $StoragePool1 -Size 60
+}
+```
+
+### Create shared volumes
+
+Shared volumes can be attached to multiple server profiles simultaneously, which is useful for cluster shared storage:
+
+```powershell
+1..5 | ForEach-Object {
+    New-OVStorageVolume -name "SharedVol$_" -StoragePool FST_CPG2 -Size 250 -shared
+}
+
+Get-OVStorageVolume
+```
+
+---
+
+## Server_Multiconnection_SAN_Storage_Sample.ps1
+
+This script builds on the networking sample to create a Server Profile with both FC connections and attached SAN volumes. OneView manages the full zoning workflow automatically.
+
+### Define FC connections
+
+Connections 3 and 4 are Fibre Channel HBAs pointing to the production fabrics:
+
+```powershell
+$netProdFCA = Get-OVNetwork "Production Fabric A"
+$conFC1     = New-OVProfileConnection -id 3 -type FibreChannel -requestedBW 4000 -network $netProdFCA
+
+$netProdFCB = Get-OVNetwork "Production Fabric B"
+$conFC2     = New-OVProfileConnection -id 4 -type FibreChannel -requestedBW 4000 -network $netProdFCB
+```
+
+### Attach storage volumes
+
+`Get-OVProfileAttachVolume` wraps a storage volume object into a volume attachment descriptor. The `-volumeid` is the LUN ID as seen by the server.
+
+```powershell
+$volume1 = Get-OVStorageVolume -Name Volume1 | Get-OVProfileAttachVolume -volumeid 1
+$volume2 = Get-OVStorageVolume -Name SharedVolume1 | Get-OVProfileAttachVolume -volumeid 2
+$attachVolumes = @($volume1, $volume2)
+```
+
+### Create the profile with SAN storage
+
+The `-SANStorage` switch enables SAN storage management. `-HostOsType` sets the host personality on the storage array for correct multipathing behavior.
+
+```powershell
+$server      = Get-OVServer -NoProfile | Select-Object -First 1
+$profileName = "Profile-" + $server.serialNumber
+
+$netRed    = Get-OVNetwork "red"
+$conRed1   = New-OVProfileConnection -id 1 -type Ethernet -requestedBW 1000 -network $netRed
+$conRed2   = New-OVProfileConnection -id 2 -type Ethernet -requestedBW 1000 -network $netRed
+$netBlack  = Get-OVNetwork "black"
+$conBlack1 = New-OVProfileConnection -id 5 -type Ethernet -requestedBW 2000 -network $netBlack
+$conBlack2 = New-OVProfileConnection -id 6 -type Ethernet -requestedBW 2000 -network $netBlack
+$netSetProd = Get-OVNetworkSet "Production Networks"
+$conSet1   = New-OVProfileConnection -id 7 -type Ethernet -requestedBW 3000 -network $netSetProd
+$conSet2   = New-OVProfileConnection -id 8 -type Ethernet -requestedBW 3000 -network $netSetProd
+
+$conList = @($conRed1,$conRed2,$conBlack1,$conBlack2,$conSet1,$conSet2,$conFC1,$conFC2)
+
+$task = New-OVProfile `
+    -name         $profileName `
+    -server       $server `
+    -connections  $conList `
+    -SANStorage `
+    -HostOsType   VMware `
+    -StorageVolume $attachVolumes `
+    -Async
+
+$task = $task | Wait-OVTaskComplete
+```
+
+### Supported `-HostOsType` values
+
+| Value | OS |
+|---|---|
+| `VMware` | VMware ESXi |
+| `Windows2012` | Windows Server 2012+ |
+| `RHEL` | Red Hat Enterprise Linux |
+| `SUSE` | SUSE Linux Enterprise |
+| `AIX` | IBM AIX |
+| `Citrix` | Citrix XenServer |
+
+<Warning>
+Make sure a SAN Manager (e.g. Brocade Network Advisor) is already configured in OneView before creating profiles with SAN storage. OneView needs SAN Manager access to create and push zones to the fabric switches.
+</Warning>
+
+### Verify the result
+
+```powershell
+$profile = Send-OVRequest $task.associatedResource.resourceUri
+$profile.connections | Format-Table
+```
+
+## Storage workflow summary
+
+<Steps>
+  <Step title="Add SAN Manager">
+    Register a Brocade Network Advisor or Cisco DCNM SAN manager so OneView can read the fabric topology and push zones.
+
+    ```powershell
+    Add-OVSanManager -hostname 172.18.15.1 -type BNA `
+        -username administrator -password password -UseSsl $True | Wait-OVTaskComplete
+    ```
+  </Step>
+
+  <Step title="Add storage system">
+    Register the Primera or 3PAR array and map its host ports to OneView FC networks.
+
+    ```powershell
+    Add-OVStorageSystem @params | Wait-OVTaskComplete
+    ```
+  </Step>
+
+  <Step title="Add storage pools">
+    Expose the array CPGs (common provisioning groups) as OneView storage pools.
+
+    ```powershell
+    $StorageSystem | New-OVStoragePool -PoolName "FST_CPG1"
+    ```
+  </Step>
+
+  <Step title="Create volumes">
+    Provision thin or thick volumes from the storage pools.
+
+    ```powershell
+    New-OVStorageVolume -name "Vol1" -Pool $StoragePool1 -Size 60
+    ```
+  </Step>
+
+  <Step title="Attach volumes to a Server Profile">
+    Create volume attachment descriptors and pass them to `New-OVProfile` with `-SANStorage`.
+
+    ```powershell
+    $vol = Get-OVStorageVolume -Name "Vol1" | Get-OVProfileAttachVolume -volumeid 1
+    New-OVProfile -name $profileName -server $server -connections $conList `
+        -SANStorage -HostOsType VMware -StorageVolume $vol
+    ```
+  </Step>
+</Steps>

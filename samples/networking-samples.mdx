@@ -1,0 +1,246 @@
+---
+title: Networking Samples
+description: Define Ethernet and Fibre Channel networks, create network sets, and build Logical Interconnect Groups with uplink sets using POSH-HPEOneView sample scripts.
+---
+
+Three sample scripts cover network resource creation:
+
+| Script | Purpose |
+|---|---|
+| `DefineNetworks_Sample.ps1` | Single Virtual Connect — Ethernet networks, bulk VLAN creation, network sets, FC networks |
+| `DefineNetworks_AA_VC_Sample.ps1` | Active/Active Virtual Connect — VLAN networks with paired A/B naming for MLAG |
+| `DefineLogicalInterconnectGroup_Sample.ps1` | LIG creation with Ethernet and FC uplink sets |
+
+## Connecting to the appliance
+
+All three scripts check for an existing session before prompting:
+
+```powershell
+if (-not $ConnectedSessions)
+{
+    $Appliance  = Read-Host 'ApplianceName'
+    $Credential = Get-Credential -UserName Administrator -Message Password
+    $ApplianceConnection = Connect-OVMgmt -Hostname $Appliance -Credential $Credential
+}
+```
+
+---
+
+## DefineNetworks_Sample.ps1
+
+This script creates a representative set of Ethernet and FC networks for a standard single-VC deployment.
+
+### Inspect existing resources
+
+```powershell
+Get-OVNetwork
+Get-OVNetworkSet
+```
+
+### Create individual Ethernet networks
+
+```powershell
+# Named networks for clarity
+$status = New-OVNetwork -type "Ethernet" -name "red"    -vlanId 10 -smartlink $true
+New-OVNetwork -type "Ethernet" -name "blue"   -vlanId 20 -smartlink $true
+New-OVNetwork -type "Ethernet" -name "green"  -vlanId 30 -smartlink $true
+New-OVNetwork -type "Ethernet" -name "yellow" -vlanId 40 -smartlink $true
+New-OVNetwork -type "Ethernet" -name "black"  -vlanId 50 -smartlink $true
+```
+
+### Bulk network creation from a VLAN range
+
+The `-vlanRange` parameter accepts comma-separated ranges, creating one network per VLAN ID automatically:
+
+```powershell
+# Creates 23 networks: NetSuffix_100 through NetSuffix_120, NetSuffix_123, NetSuffix_135
+New-OVNetwork -Name "NetSuffix" -vlanRange "100-120,123,135"
+```
+
+### Create a Network Set
+
+Network sets group multiple Ethernet networks behind a single logical port in a server profile. The `UntaggedNetwork` carries untagged frames for that port.
+
+```powershell
+$network20 = Get-OVNetwork -name "blue"   -type "Ethernet"
+$network30 = Get-OVNetwork -name "green"  -type "Ethernet"
+$network40 = Get-OVNetwork -name "yellow" -type "Ethernet"
+
+New-OVNetworkSet -name "Production Networks" `
+    -UntaggedNetwork $network20 `
+    -Networks $network20,$network30,$network40
+```
+
+### Create Fibre Channel networks
+
+```powershell
+# Fabric-attached FC networks (auto login redistribution enabled)
+New-OVNetwork -name "Production Fabric A" -type FC `
+    -typicalBandwidth 4000 -autoLoginRedistribution $true
+New-OVNetwork -name "Production Fabric B" -type FC `
+    -typicalBandwidth 4000 -autoLoginRedistribution $true
+
+# Direct-attach FC (no external fabric)
+New-OVNetwork -name "DirectAttach Fabric A" -type FC `
+    -typicalBandwidth 4000 -autoLoginRedistribution $true -fabrictype "DirectAttach"
+New-OVNetwork -name "DirectAttach Fabric B" -type FC `
+    -typicalBandwidth 4000 -autoLoginRedistribution $true -fabrictype "DirectAttach"
+
+Get-OVNetwork
+```
+
+---
+
+## DefineNetworks_AA_VC_Sample.ps1 — Active/Active configuration
+
+In an Active/Active (MLAG) deployment both Virtual Connect modules carry all VLANs. Networks are typically named with a `VLAN <id>` convention rather than A/B suffixes, because both modules share the same uplink set.
+
+### Create VLAN networks
+
+```powershell
+# Initial network
+$status = New-OVNetwork -Type "Ethernet" -Name "VLAN 10" -VlanId 10 -Smartlink $true
+Get-OVNetwork -Name "VLAN 10" -Type Ethernet
+
+# Bulk creation for VLANs 20-60
+20,30,40,50,60 | ForEach-Object {
+    New-OVNetwork -Type "Ethernet" -Name "VLAN $_" -VlanId $_ -Smartlink $true
+}
+```
+
+### Network Set for A/A
+
+```powershell
+$network20 = Get-OVNetwork -Name "VLAN 20" -Type "Ethernet"
+$network30 = Get-OVNetwork -Name "VLAN 30" -Type "Ethernet"
+$network40 = Get-OVNetwork -Name "VLAN 40" -Type "Ethernet"
+
+New-OVNetworkSet -Name "Production Networks" `
+    -UntaggedNetwork $network20 `
+    -Networks $network20, $network30, $network40
+
+Get-OVNetworkSet -Name "Production Networks"
+```
+
+### FC networks (same as single-VC)
+
+```powershell
+New-OVNetwork -Name "Production Fabric A" -Type FC `
+    -typicalBandwidth 4000 -autoLoginRedistribution $true
+New-OVNetwork -Name "Production Fabric B" -Type FC `
+    -typicalBandwidth 4000 -autoLoginRedistribution $true
+New-OVNetwork -Name "DirectAttach Fabric A" -Type FC `
+    -typicalBandwidth 4000 -autoLoginRedistribution $true -fabrictype "DirectAttach"
+New-OVNetwork -Name "DirectAttach Fabric B" -Type FC `
+    -typicalBandwidth 4000 -autoLoginRedistribution $true -fabrictype "DirectAttach"
+
+Get-OVNetwork
+```
+
+<Note>
+The key difference between `DefineNetworks_Sample.ps1` and `DefineNetworks_AA_VC_Sample.ps1` is naming convention and how uplink sets are later configured in the LIG. In A/A mode, a single uplink set spans both VC bays rather than separate A and B uplink sets.
+</Note>
+
+---
+
+## DefineLogicalInterconnectGroup_Sample.ps1
+
+A Logical Interconnect Group (LIG) defines the interconnect module layout and uplink connectivity for an enclosure. This script creates a LIG with FlexFabric modules in bays 1 and 2, then adds Ethernet and FC uplink sets.
+
+### Prerequisites check
+
+```powershell
+$networks = Get-OVNetwork -type Ethernet
+
+if ($networks -eq $null)
+{
+    Write-Host "There are no defined Ethernet Networks. Please create some."
+    break
+}
+```
+
+### Create the LIG with SNMP configuration
+
+The SNMP hashtable defines read community, trap destinations, trap severities, and access lists inline:
+
+```powershell
+$LIGName = "LIG Prod"
+$Bays    = @{1 = "FlexFabric"; 2 = "FlexFabric"}
+
+$SNMP = @{
+    readCommunity  = "MyTr@p1"
+    enabled        = $True
+    systemContact  = "Network Admin"
+    snmpAccess     = @("192.168.1.2/32", "10.1.1.0/24")
+    trapDestinations = @(
+        @{
+            trapDestination  = "myhost.local"
+            communityString  = "MyTr@p2"
+            trapFormat       = "SNMPv1"
+            trapSeverities   = @("Critical","Major","Minor","Warning","Normal","Info","Unknown")
+            fcTrapCategories = @("PortStatus","Other")
+        }
+    )
+}
+
+$NewLig = New-OVLogicalInterconnectGroup -Name $LIGName -bays $bays -snmp $snmp |
+    Wait-OVTaskComplete |
+    Get-OVLogicalInterconnectGroup
+```
+
+### Add an Ethernet uplink set
+
+Uplink sets bind networks to physical uplink ports on the interconnect modules. The `BAY1:X4` notation means bay 1, port X4.
+
+```powershell
+$Networks = "red","blue","green" | Get-OVNetwork -Type Ethernet
+
+$newUT = $NewLig | New-OVUplinkSet `
+    -Name LUT1 `
+    -Type "Ethernet" `
+    -Networks $Networks `
+    -NativeEthNetwork $Networks[0] `
+    -UplinkPorts "BAY1:X4","BAY1:X5","BAY2:X4","BAY2:X5" `
+    -EthMode "Auto"
+```
+
+### Add Fibre Channel uplink sets
+
+Each FC fabric gets its own uplink set. Refresh the LIG object between additions to pick up the previous uplink set's changes.
+
+```powershell
+$FabricA = Get-OVNetwork -Name "Production Fabric A" -Type FibreChannel
+$FabricB = Get-OVNetwork -Name "Production Fabric B" -Type FibreChannel
+
+# Fabric A — ports X1 and X2 on bay 1
+$NewLig = Get-OVLogicalInterconnectGroup -Name $LIGName
+$newUT  = $NewLig | New-OVUplinkSet -Name "Fabric A" `
+    -Type "FibreChannel" -Networks $FabricA -UplinkPorts "BAY1:X1,BAY1:X2"
+
+# Fabric B — ports X1 and X2 on bay 2
+$NewLig = Get-OVLogicalInterconnectGroup -Name $LIGName
+$newUT  = $NewLig | New-OVUplinkSet -Name "Fabric B" `
+    -Type "FibreChannel" -Networks $FabricB -UplinkPorts "BAY2:X1,BAY2:X2"
+```
+
+### Wrap the LIG in an Enclosure Group
+
+From `CreateEnclosureGroup_Sample.ps1`, once the LIG is ready:
+
+```powershell
+$enclGroup = New-OVEnclosureGroup `
+    -Name "Prod VC FlexFabric Group 1" `
+    -LogicalInterconnectGroup $NewLig
+```
+
+## Uplink port notation
+
+| Format | Meaning |
+|---|---|
+| `BAY1:X4` | Bay 1, Ethernet uplink port X4 |
+| `BAY2:X1,BAY2:X2` | Bay 2, FC ports X1 and X2 |
+| `Enclosure1:Bay3:Q1` | Synergy frame 1, bay 3, QSFP port 1 |
+
+<Tip>
+Always re-fetch the LIG object (`Get-OVLogicalInterconnectGroup`) after each `New-OVUplinkSet` call. The cmdlet returns the task, not the updated LIG, so the in-memory object becomes stale.
+</Tip>

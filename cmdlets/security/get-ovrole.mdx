@@ -1,0 +1,76 @@
+---
+title: "Get-OVRole"
+description: "List the built-in security roles available on an HPE OneView appliance."
+---
+
+## Synopsis
+
+Returns the built-in role names recognized by an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVRole
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVRole` is deprecated. In the current library version, role information is returned as part of user account objects from `Get-OVUser`. The cmdlet emits a deprecation warning and takes no action.
+
+To view the roles assigned to a user, retrieve the user account with `Get-OVUser` and inspect the `permissions` property of the returned object.
+
+<Note>
+This cmdlet is deprecated and will be removed in a future release. Use `Get-OVUser` to inspect role assignments.
+</Note>
+
+## Parameters
+
+This cmdlet accepts no parameters.
+
+## Built-in roles
+
+The following roles are built into every HPE OneView appliance:
+
+| Role name | Scope of access |
+| --- | --- |
+| `Infrastructure administrator` | Full administrative access to all resources and settings. |
+| `Server administrator` | Manage server hardware, including power operations and firmware. |
+| `Network administrator` | Manage networks, network sets, uplink sets, and logical switches. |
+| `Storage administrator` | Manage storage systems, storage pools, and volumes. |
+| `Read only` | View all resources with no ability to make changes. |
+| `Backup administrator` | Create and restore appliance backups. |
+| `Scope operator` | Perform operations within assigned scopes. |
+| `Scope administrator` | Manage scope definitions and membership. |
+
+Role names are case-insensitive when passed to `-Roles` in `New-OVUser` or `Set-OVUser`.
+
+## Examples
+
+### View roles assigned to a user
+
+```powershell
+$user = Get-OVUser -Name 'jsmith'
+$user.permissions
+```
+
+Retrieves the `jsmith` account and displays its role and scope assignments.
+
+### List all users and their roles
+
+```powershell
+Get-OVUser | Select-Object userName, permissions
+```
+
+Returns every local user account with its permissions array.
+
+## Output
+
+This cmdlet produces no output. See `Get-OVUser` for user and role data.
+
+## Related cmdlets
+
+- [Get-OVUser](/cmdlets/security/get-ovuser)
+- [New-OVUser](/cmdlets/security/new-ovuser)
+- [Set-OVUser](/cmdlets/security/set-ovuser)
+- [Get-OVScope](/cmdlets/security/get-ovscope)

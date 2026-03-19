@@ -1,0 +1,70 @@
+---
+title: "Get-OVHealthStatus"
+description: "Return the overall health status of the HPE OneView appliance and its managed resources."
+---
+
+## Synopsis
+
+Retrieves the health status summary for the HPE OneView appliance and all resource types it manages.
+
+## Syntax
+
+```powershell
+Get-OVHealthStatus
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVHealthStatus` queries the appliance health status endpoint and returns an entry per resource type, indicating the aggregate health state (e.g. `OK`, `Warning`, `Critical`, `Unknown`). This provides a quick top-level view of the operational state of all resources managed by the appliance.
+
+Results are sorted by appliance connection name and then by resource type. The returned objects are typed as `HPEOneview.Appliance.HealthStatus`.
+
+This cmdlet is useful for dashboards, monitoring scripts, and initial triage when investigating issues across a large managed environment.
+
+## Parameters
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specifies the HPE OneView appliance connection(s) to query. Defaults to the default connection from `${Global:ConnectedSessions}`. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+**Example 1: Get health status from the default appliance**
+
+```powershell
+Get-OVHealthStatus
+```
+
+Returns the health status for all resource types on the default connected appliance.
+
+**Example 2: Display only resources with a non-OK status**
+
+```powershell
+Get-OVHealthStatus | Where-Object { $_.healthSummary -ne 'OK' }
+```
+
+Filters the results to show only resource types that are not in an OK state.
+
+**Example 3: Query multiple appliances**
+
+```powershell
+Get-OVHealthStatus -ApplianceConnection ${Global:ConnectedSessions}
+```
+
+Retrieves health status from all connected appliances and returns a combined, sorted result set.
+
+## Output
+
+`HPEOneview.Appliance.HealthStatus`
+
+An object per resource type containing:
+
+| Property | Description |
+|---|---|
+| `resourceType` | The type of resource (e.g. `server-hardware`, `enclosures`) |
+| `healthSummary` | Aggregate health state: `OK`, `Warning`, `Critical`, or `Unknown` |
+| `ApplianceConnection` | The appliance connection this result belongs to |
+
+Results are sorted by `ApplianceConnection.Name` then by `resourceType`.

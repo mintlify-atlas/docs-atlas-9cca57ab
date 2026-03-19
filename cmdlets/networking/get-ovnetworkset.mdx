@@ -1,0 +1,81 @@
+---
+title: "Get-OVNetworkSet"
+description: "Retrieve network set resources from the HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves one or more network set resources from the connected HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVNetworkSet
+    [-Name <String>]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [-ExportFile <String>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVNetworkSet` queries the HPE OneView appliance for network set resources. A network set is a group of Ethernet networks that can be assigned as a single object to a server profile connection, allowing a server to access multiple VLANs through one logical connection.
+
+Network sets are referenced by server profiles to simplify multi-VLAN NIC assignments. One network in a set can be designated as the untagged (native) network, which carries untagged traffic.
+
+When no parameters are specified, all network sets within the current scope are returned.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name of the network set to retrieve. When omitted, all network sets are returned.
+</ParamField>
+
+<ParamField path="Label" type="String">
+  Filter results by a resource label assigned to the network set.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Filter results to resources that belong to the specified scope. Defaults to `AllResourcesInScope`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+<ParamField path="ExportFile" type="String">
+  Path to a JSON file where the retrieved network set objects will be exported.
+</ParamField>
+
+## Examples
+
+### Return all network sets
+
+```powershell
+Get-OVNetworkSet
+```
+
+### Return a specific network set by name
+
+```powershell
+Get-OVNetworkSet -Name "Production Networks"
+```
+
+### List existing network sets before creating new ones
+
+```powershell
+Write-Host "Existing Network Sets:"
+Get-OVNetworkSet
+```
+
+## Output
+
+`HPEOneView.Networking.NetworkSet` objects.
+
+## Related cmdlets
+
+- [New-OVNetworkSet](/cmdlets/networking/new-ovnetworkset)
+- [Get-OVNetwork](/cmdlets/networking/get-ovnetwork)
+- [New-OVNetwork](/cmdlets/networking/new-ovnetwork)

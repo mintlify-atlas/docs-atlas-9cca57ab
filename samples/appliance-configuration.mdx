@@ -1,0 +1,284 @@
+---
+title: Appliance Configuration Samples
+description: Step-by-step walkthrough of ApplianceConfig_Sample.ps1 and ComposerApplianceConfig_Sample.ps1 for automating HPE OneView initial setup.
+---
+
+Two sample scripts cover initial appliance configuration:
+
+| Script | Target appliance |
+|---|---|
+| `ApplianceConfig_Sample.ps1` | HPE OneView Virtual Appliance (VM) |
+| `ComposerApplianceConfig_Sample.ps1` | HPE Synergy Composer (physical appliance, HA pair) |
+
+Both scripts follow the same overall sequence. The Composer variant adds service IP parameters required for the two-node Composer cluster.
+
+## Parameters
+
+<CodeGroup>
+```powershell ApplianceConfig_Sample.ps1
+[CmdletBinding()]
+param
+(
+    [IPAddress]$vm_ipaddr,       # DHCP address assigned after first boot
+    [String]$Hostname,           # Target FQDN after static IP is set
+    [Object]$NewPassword,        # New Administrator password ([String] or [SecureString])
+    [IPAddress]$IPv4Address,     # Static management IP
+    [String]$IPv4SubnetMask,     # Subnet mask (dotted-decimal)
+    [IPAddress]$IPv4Gateway,     # Default gateway
+    [Array]$IPv4DnsServers,      # One or more DNS server IPs
+    [String]$DnsDomainName,      # DNS domain (e.g. corp.local)
+    [Array]$IPv4NtpServers,      # NTP server IPs (optional)
+    [IPAddress]$IPv6Address,     # Static IPv6 address (optional)
+    [Int]$IPv6CidrMask           # IPv6 CIDR prefix length (optional)
+)
+```
+
+```powershell ComposerApplianceConfig_Sample.ps1
+[CmdletBinding()]
+param
+(
+    [IPAddress]$DhcpAddress,      # Composer DHCP address after first boot
+    [String]$Hostname,            # Target FQDN
+    [Object]$NewPassword,
+    [IPAddress]$IPv4Address,      # Virtual IP (VIP) for the Composer pair
+    [String]$IPv4SubnetMask,
+    [IPAddress]$IPv4Gateway,
+    [Array]$IPv4DnsServers,
+    [String]$DnsDomainName,
+    [IPAddress]$ServiceIPv4Node1, # Physical IP for Composer node 1
+    [IPAddress]$ServiceIPv4Node2, # Physical IP for Composer node 2
+    [Array]$IPv4NtpServers,
+    [IPAddress]$IPv6Address,      # Optional IPv6 VIP
+    [Int]$IPv6CidrMask,
+    [IPAddress]$ServiceIPv6Node1, # Optional IPv6 for node 1
+    [IPAddress]$ServiceIPv6Node2  # Optional IPv6 for node 2
+)
+```
+</CodeGroup>
+
+## Script walkthrough
+
+<Steps>
+  <Step title="Wait for the appliance to become reachable">
+    The script polls the DHCP address with `Test-Connection` before proceeding, so it is safe to invoke immediately after powering on the VM or Composer.
+
+    ```powershell
+    Write-Host 'Waiting for appliance to respond to network test.' -NoNewline
+
+    While (-not (Test-Connection -ComputerName $vm_ipaddr.IPAddressToString -Quiet))
+    {
+        Write-Host '.' -NoNewline
+    }
+    ```
+  </Step>
+
+  <Step title="Accept the EULA">
+    The script checks whether the EULA has already been accepted (useful for re-runs) before calling `Set-OVEulaStatus`.
+
+    ```powershell
+    if (-not (Get-OVEulaStatus -Appliance $vm_ipaddr.IPAddressToString).Accepted)
+    {
+        Write-Host "Accepting EULA..."
+        $ret = Set-OVEulaStatus -SupportAccess "yes" -Appliance $vm_ipaddr.IPAddressToString
+    }
+    ```
+  </Step>
+
+  <Step title="Set the initial Administrator password">
+    A brand-new appliance requires a password change on the first login. The script catches the `PasswordChangeRequired` exception and handles it inline.
+
+    ```powershell
+    Try
+    {
+        Connect-OVMgmt -appliance $vm_ipaddr.IPAddressToString -user "Administrator" -password "admin"
+    }
+    catch [HPEOneView.Appliance.PasswordChangeRequired]
+    {
+        Write-Host "Set initial password"
+        Set-OVInitialPassword -OldPassword "admin" -NewPassword $NewPassword `
+            -Appliance $vm_ipaddr.IPAddressToString
+    }
+    ```
+
+    After the password change, the script reconnects with the new password:
+
+    ```powershell
+    $ApplianceConnection = Connect-OVMgmt -appliance $vm_ipaddr.IPAddressToString `
+        -user Administrator -password $NewPassword
+    ```
+
+    <Note>
+    The `ComposerApplianceConfig_Sample.ps1` also catches `HPEOneView.Appliance.AuthSessionException` for cases where the default password was already changed in a previous run.
+    </Note>
+  </Step>
+
+  <Step title="Configure static networking">
+    `Set-OVApplianceNetworkConfig` configures the hostname, static IP, subnet, gateway, DNS, and optionally IPv6. After this call the appliance restarts its network stack, so the script reconnects using the new hostname.
+
+    ```powershell
+    $params = @{
+        Hostname        = $Hostname
+        IPv4Addr        = $IPv4Address.IPAddressToString
+        IPv4Subnet      = $IPv4SubnetMask
+        IPv4Gateway     = $IPv4Gateway.IPAddressToString
+        DomainName      = $DnsDomainName
+        IPv4NameServers = $IPv4DnsServers
+    }
+
+    # Add IPv6 when provided
+    if ($IPv6Address)
+    {
+        $params.Add('IPv6Type',   'STATIC')
+        $params.Add('IPv6Addr',   $IPv6Address)
+        $params.Add('IPv6Subnet', $IPv6CidrMask)
+    }
+
+    $task = Set-OVApplianceNetworkConfig @params
+    ```
+
+    For a **Synergy Composer**, the per-node service IPs are also included:
+
+    ```powershell
+    $params = @{
+        Hostname         = $Hostname
+        IPv4Addr         = $IPv4Address.IPAddressToString
+        IPv4Subnet       = $IPv4SubnetMask
+        IPv4Gateway      = $IPv4Gateway.IPAddressToString
+        DomainName       = $DnsDomainName
+        IPv4NameServers  = $IPv4DnsServers
+        ServiceIPv4Node1 = $ServiceIPv4Node1   # Physical IP, Composer node 1
+        ServiceIPv4Node2 = $ServiceIPv4Node2   # Physical IP, Composer node 2
+    }
+    ```
+  </Step>
+
+  <Step title="Configure NTP">
+    ```powershell
+    Write-Host 'Setting Appliance NTP Servers'
+    $Results = Set-OVApplianceDateTime -NtpServers $IPv4NtpServers
+    ```
+  </Step>
+
+  <Step title="Generate and install an appliance certificate">
+    The script generates a CSR, submits it to an internal Windows CA using `certreq.exe`, and installs the signed certificate. Adapt the `$CA` and `$template` variables for your PKI.
+
+    ```powershell
+    $template = "WebServer"                          # Windows certificate template name
+    $CA       = "MyCA.domain.local\domain-MyCA-CA"  # CA config string
+    $csrdir   = "C:\Certs\Requests"                  # Local path for CSR and cert files
+
+    $CSR = @{
+        Country         = "US"
+        State           = "California"
+        City            = "Palo Alto"
+        Organization    = "Hewlett-Packard"
+        CommonName      = $Hostname
+        AlternativeName = "$Hostname,hpov,$IPv4Address"
+    }
+
+    $request = New-OVApplianceCsr @CSR -ApplianceConnection $ApplianceConnection
+    Set-Content -path (Join-Path $csrdir $csrFileName) -value $request.base64Data -Force
+
+    # Submit to Windows CA
+    $parameters = "-config {0} -submit -attrib CertificateTemplate:{1} {2}\{3}.csr {2}\{3}.cer {2}\{3}.p7b" `
+        -f $CA, $template, $csrdir, $baseName
+    $req = [System.Diagnostics.Process]::Start("certreq", $parameters)
+    $req.WaitForExit()
+
+    # Install the signed certificate
+    $Task = gc $csrdir\$cerFileName | Install-OVApplianceCertificate -ApplianceConnection $ApplianceConnection | Wait-OVTaskComplete
+    ```
+
+    <Note>
+    Certificate management applies only to `ApplianceConfig_Sample.ps1`. The Composer sample omits this section because Synergy Composer certificate workflows differ.
+    </Note>
+  </Step>
+
+  <Step title="Configure LDAP / Active Directory authentication">
+    Both scripts configure an Active Directory LDAP directory and map four AD groups to OneView roles.
+
+    ```powershell
+    $dc1 = New-OVLdapServer -Name dc1.domain.local
+    $dc2 = New-OVLdapServer -Name dc2.domain.local
+
+    $AuthParams = @{
+        UserName = "ftoomey@domain.local"
+        Password = ConvertTo-SecureString -AsPlainText "HPinv3nt" -Force
+    }
+
+    $LdapAuthDirectory = New-OVLdapDirectory -Name 'domain.local' -AD `
+        -BaseDN 'dc=domain,dc=local' -servers $dc1,$dc2 @AuthParams
+
+    $LdapGroups = $LdapAuthDirectory | Show-OVLdapGroups @AuthParams
+
+    $InfrastructureAdminGroup = $LdapGroups | Where-Object Name -match 'CI Manager Full'
+    $ServerAdminGroup         = $LdapGroups | Where-Object Name -match 'CI Manager Server'
+    $StorageAdminGroup        = $LdapGroups | Where-Object Name -match 'CI Manager Storage'
+    $NetworkAdminGroup        = $LdapGroups | Where-Object Name -match 'CI Manager Network'
+
+    New-OVLdapGroup -d $LdapAuthDirectory -GroupName $InfrastructureAdminGroup `
+        -Roles "Infrastructure administrator" @AuthParams
+    New-OVLdapGroup -d $LdapAuthDirectory -GroupName $NetworkAdminGroup `
+        -Roles "Network administrator" @AuthParams
+    New-OVLdapGroup -d $LdapAuthDirectory -GroupName $ServerAdminGroup `
+        -Roles "Server administrator" @AuthParams
+    New-OVLdapGroup -d $LdapAuthDirectory -GroupName $StorageAdminGroup `
+        -Roles "Storage administrator" @AuthParams
+    ```
+  </Step>
+
+  <Step title="Upload an SPP firmware baseline">
+    ```powershell
+    # Upload a Service Pack for ProLiant ISO from a network share
+    Get-ChildItem \\Server\SPP\bp-Default-Baseline-0-1.iso | Add-OVBaseline
+    ```
+  </Step>
+
+  <Step title="Create local users">
+    ```powershell
+    New-OVUser Nat   -fullName "Nat Network Admin"  -password hpinvent -roles "Network administrator"
+    New-OVUser Sally -fullName "Sally Server Admin" -password hpinvent -roles "Server administrator"
+    New-OVUser Sandy -fullName "Sandy SAN Admin"    -password hpinvent -roles "Storage administrator"
+    New-OVUser Rheid -fullName "Rheid Read-Only"    -password hpinvent -roles "Read only"
+    New-OVUser Bob   -fullName "Bob Backup"         -password hpinvent -roles "Backup administrator"
+    New-OVUser admin -fullName "admin"              -password hpinvent -roles "Infrastructure administrator"
+    ```
+
+    <Warning>
+    Change all passwords to meet your organization's password policy before running this script.
+    </Warning>
+  </Step>
+
+  <Step title="Resource configuration (networks, LIG, enclosure group, storage)">
+    After core appliance setup, the scripts continue with resource provisioning. See the [Networking](/samples/networking-samples) and [Storage](/samples/storage-samples) sample pages for detailed explanations of those sections.
+
+    The `ApplianceConfig_Sample.ps1` concludes by adding an enclosure:
+
+    ```powershell
+    $EnclosureAddParams = @{
+        Hostname       = '172.18.1.11'
+        Username       = 'administrator'
+        Password       = 'password'
+        EnclosureGroup = $EnclosureGroup
+    }
+
+    $Results = Add-OVEnclosure @EnclosureAddParams
+    ```
+  </Step>
+</Steps>
+
+## Adapting for your environment
+
+| Placeholder | Where to change |
+|---|---|
+| `domain.local`, `dc1.domain.local` | LDAP server and directory configuration |
+| `ftoomey@domain.local` / `HPinv3nt` | Bind account used to query AD groups |
+| `CI Manager Full`, `CI Manager Server`, etc. | AD group names mapped to OneView roles |
+| `MyCA.domain.local\domain-MyCA-CA` | Windows CA for certificate signing |
+| `172.18.1.11` / `administrator` / `password` | Enclosure OA address and credentials |
+| `172.18.15.1` / BNA credentials | SAN Manager address and credentials |
+| `172.18.11.11` / `3paradm` / `3pardata` | Storage array address and credentials |
+
+<Tip>
+Run the script in a single elevated PowerShell session. The `$ApplianceConnection` object is reused throughout, so do not close the session between steps.
+</Tip>

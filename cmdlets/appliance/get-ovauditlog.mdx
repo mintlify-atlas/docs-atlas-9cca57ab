@@ -1,0 +1,115 @@
+---
+title: "Get-OVAuditLog"
+description: "Retrieve audit log entries from the HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves audit log entries from the HPE OneView appliance, with optional filtering by count, date range, or time span.
+
+## Syntax
+
+```powershell
+Get-OVAuditLog
+    [-Count <Int>]
+    [-TimeSpan <TimeSpan>]
+    [-Start <DateTime>]
+    [-End <DateTime>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVAuditLog` retrieves audit log records from the HPE OneView appliance, sorted in ascending order by date. Audit log entries capture user actions and system events such as logins, resource changes, and administrative operations.
+
+Filtering options:
+
+- **Count**: Limits the total number of records returned.
+- **TimeSpan**: Returns records within a rolling window ending at the current time (e.g. the past 7 days).
+- **Start / End**: Returns records within a specific date range. When `-Start` is used without `-End`, `-End` defaults to the current date and time.
+
+`-TimeSpan` and `-Start`/`-End` are mutually exclusive — only one date filter can be active at a time.
+
+Returned entries are typed as `HPEOneview.Appliance.AuditLogEntry`.
+
+## Parameters
+
+<ParamField path="Count" type="Int">
+  Maximum number of audit log records to return. When set to `0` (the default), all matching records are returned.
+</ParamField>
+
+<ParamField path="TimeSpan" type="TimeSpan">
+  A `TimeSpan` that defines a rolling window relative to the current time. For example, `[TimeSpan]::FromDays(7)` retrieves records from the past 7 days. Mutually exclusive with `-Start`.
+</ParamField>
+
+<ParamField path="Start" type="DateTime">
+  The start of the date range filter. Returns records with a timestamp on or after this value. Mutually exclusive with `-TimeSpan`.
+</ParamField>
+
+<ParamField path="End" type="DateTime">
+  The end of the date range filter. Used with `-Start`. Defaults to the current date and time (`[DateTime]::Now`) when not specified.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specifies the HPE OneView appliance connection(s) to query. Defaults to the default connection from `${Global:ConnectedSessions}`. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+**Example 1: Retrieve all audit log entries**
+
+```powershell
+Get-OVAuditLog
+```
+
+Returns all audit log entries from the default connected appliance in ascending date order.
+
+**Example 2: Retrieve the most recent 100 entries**
+
+```powershell
+Get-OVAuditLog -Count 100
+```
+
+Limits the result to the 100 most recent audit log records.
+
+**Example 3: Retrieve entries from the past 7 days**
+
+```powershell
+Get-OVAuditLog -TimeSpan ([TimeSpan]::FromDays(7))
+```
+
+Returns all audit log entries recorded in the last 7 days.
+
+**Example 4: Retrieve entries within a specific date range**
+
+```powershell
+Get-OVAuditLog -Start '2026-01-01' -End '2026-01-31'
+```
+
+Returns audit log entries with a timestamp between January 1 and January 31, 2026.
+
+**Example 5: Retrieve entries from a specific appliance**
+
+```powershell
+Get-OVAuditLog -Count 50 -ApplianceConnection $MyConnection
+```
+
+Retrieves the last 50 audit log entries from a specific appliance connection.
+
+## Output
+
+`HPEOneview.Appliance.AuditLogEntry`
+
+Each object represents a single audit log record and contains fields such as:
+
+| Property | Description |
+|---|---|
+| `date` | Timestamp of the event (UTC) |
+| `source` | Source of the event (user or system) |
+| `action` | The action that was performed |
+| `result` | Outcome of the action (e.g. `SUCCESS`, `FAILED`) |
+| `objectType` | The type of resource affected |
+| `objectUri` | The URI of the affected resource |
+| `userName` | The user who performed the action |
+| `remoteIpAddress` | IP address of the client that triggered the event |

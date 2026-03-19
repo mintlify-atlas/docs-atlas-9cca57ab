@@ -1,0 +1,81 @@
+---
+title: "Remove-OVServerProfileTemplate"
+description: "Delete one or more server profile templates from an HPE OneView appliance."
+---
+
+## Synopsis
+
+Removes server profile template resources from an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Remove-OVServerProfileTemplate
+    [-InputObject] <Object>
+    [-Force]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Remove-OVServerProfileTemplate` deletes the specified server profile template from HPE OneView. A template can only be deleted if no server profiles are currently derived from it; attempting to remove a template that still has derived profiles will result in an error.
+
+By default the cmdlet prompts for confirmation before deleting. Pass `-Confirm:$false` to suppress the prompt in automation scripts.
+
+The `-Force` switch can remove templates that are in an error state.
+
+<Warning>
+Deleting a server profile template is irreversible. All consistency-checking relationships between the template and its derived profiles will be severed. If derived profiles still exist, remove them first or detach them from the template before deleting the template.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="object" required>
+  The server profile template object to remove. Accepts pipeline input. Aliases: `spt`, `name`, `ServerProfileTemplate`.
+</ParamField>
+
+<ParamField path="Force" type="switch">
+  Force removal of templates that are in an error state.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="object">
+  Specifies the HPE OneView appliance connection. Defaults to the default connected session. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+### Remove a template by name
+
+```powershell
+Get-OVServerProfileTemplate -Name 'Hypervisor Cluster Node Template v1' | Remove-OVServerProfileTemplate
+```
+
+Prompts for confirmation before deleting the template.
+
+### Remove a template without confirmation
+
+```powershell
+Get-OVServerProfileTemplate -Name 'Old Template' | Remove-OVServerProfileTemplate -Confirm:$false
+```
+
+### Remove all templates whose names match a wildcard
+
+```powershell
+Get-OVServerProfileTemplate -Name 'Dev-*' | Remove-OVServerProfileTemplate -Confirm:$false
+```
+
+Removes all templates with names beginning with `Dev-` without prompting.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` — An async task object tracking the delete operation.
+
+## Related cmdlets
+
+- [Get-OVServerProfileTemplate](/cmdlets/server-profiles/get-ovserverprofiletemplate)
+- [New-OVServerProfileTemplate](/cmdlets/server-profiles/new-ovserverprofiletemplate)
+- [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)
+- [Remove-OVServerProfile](/cmdlets/server-profiles/remove-ovserverprofile)

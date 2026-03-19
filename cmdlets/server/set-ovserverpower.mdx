@@ -1,0 +1,92 @@
+---
+title: "Set-OVServerPower"
+description: "Control the power state of a server hardware resource. Deprecated — use Start-OVServer, Stop-OVServer, or Restart-OVServer instead."
+---
+
+## Synopsis
+
+Sets the power state of a server hardware resource.
+
+<Warning>
+`Set-OVServerPower` is **deprecated**. Use [Start-OVServer](/cmdlets/server/start-ovserver), [Stop-OVServer](/cmdlets/server/stop-ovserver), or [Restart-OVServer](/cmdlets/server/restart-ovserver) instead. This cmdlet may be removed in a future release.
+</Warning>
+
+## Syntax
+
+```powershell
+Set-OVServerPower
+    [-Server] <Object>
+    [-State <String>]
+    [-powerControl <String>]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVServerPower` sends a power control request to the specified server hardware. It supports both momentary press and press-and-hold actions, as well as cold boot and reset options.
+
+This cmdlet is retained for backwards compatibility only. New scripts should use the dedicated `Start-OVServer`, `Stop-OVServer`, and `Restart-OVServer` cmdlets, which provide clearer intent and do not produce a deprecation warning.
+
+## Parameters
+
+<ParamField path="Server" type="Object" required>
+  The server hardware object, URI, or name. Accepts pipeline input.
+</ParamField>
+
+<ParamField path="State" type="String">
+  The desired power state. Valid values: `On`, `Off`. Defaults to `On`. The `PowerState` alias is also accepted.
+</ParamField>
+
+<ParamField path="powerControl" type="String">
+  The physical power control action to use. Valid values:
+  - `MomentaryPress` (default) — simulates a momentary press of the power button
+  - `PressAndHold` — holds the power button to force an immediate power-off
+  - `ColdBoot` — removes and restores power (data loss risk)
+  - `Reset` — performs a hardware reset
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Power on a server
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 1"
+Set-OVServerPower -Server $server -State On
+```
+
+Powers on the server using a momentary press.
+
+### Power off a server with a press-and-hold
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 1"
+Set-OVServerPower -Server $server -State Off -powerControl PressAndHold
+```
+
+Forces an immediate power-off by simulating a press-and-hold action on the power button.
+
+### Power on all servers in an enclosure
+
+```powershell
+Get-OVServer -Name "Encl1*" | Set-OVServerPower -State On
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+Returns an async task for the power state change operation.
+
+## Related cmdlets
+
+- [Start-OVServer](/cmdlets/server/start-ovserver)
+- [Stop-OVServer](/cmdlets/server/stop-ovserver)
+- [Restart-OVServer](/cmdlets/server/restart-ovserver)
+- [Get-OVServer](/cmdlets/server/get-ovserver)

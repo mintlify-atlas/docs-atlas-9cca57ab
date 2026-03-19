@@ -1,0 +1,89 @@
+---
+title: "Remove-OVUser"
+description: "Permanently delete a local user account from an HPE OneView appliance."
+---
+
+## Synopsis
+
+Permanently removes one or more local user accounts from an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Remove-OVUser
+    [-InputObject] <Object>
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Remove-OVUser` deletes a local user account from the appliance. The operation cannot be undone. Supply either a username string or a user object retrieved from `Get-OVUser`. The cmdlet supports `ShouldProcess`, so you will be prompted for confirmation before each deletion unless you pass `-Confirm:$false`.
+
+<Warning>
+This operation is permanent. The deleted account and all of its settings cannot be recovered. Confirm the correct account is targeted before proceeding, especially in scripts that process multiple accounts.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The user account to remove. Accepts a username string or an `HPEOneview.Appliance.User` object from the pipeline. Aliased as `u`, `user`, `UserName`, and `Name`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object" default="Default connected session">
+  The appliance connection object or name. Defaults to the default connected session. When `InputObject` is an object from the pipeline, the connection is read from the object's `ApplianceConnection` property. Aliased as `Appliance`.
+</ParamField>
+
+<ParamField path="WhatIf" type="switch">
+  Simulates the operation without making any changes. Reports what would be removed.
+</ParamField>
+
+<ParamField path="Confirm" type="switch">
+  Prompts for confirmation before each deletion. Pass `-Confirm:$false` to suppress prompts in automated scripts.
+</ParamField>
+
+## Examples
+
+### Remove a user account by name
+
+```powershell
+Remove-OVUser -InputObject 'contractor1'
+```
+
+Prompts for confirmation, then removes the `contractor1` account.
+
+### Remove a user account without confirmation prompt
+
+```powershell
+Remove-OVUser -InputObject 'contractor1' -Confirm:$false
+```
+
+Removes `contractor1` immediately without prompting.
+
+### Remove a user via pipeline from Get-OVUser
+
+```powershell
+Get-OVUser -Name 'contractor1' | Remove-OVUser -Confirm:$false
+```
+
+Retrieves the `contractor1` account object and pipes it directly into `Remove-OVUser`.
+
+### Preview which accounts would be removed with WhatIf
+
+```powershell
+Get-OVUser -Name 'temp*' | Remove-OVUser -WhatIf
+```
+
+Shows which accounts matching `temp*` would be deleted without performing any changes.
+
+## Output
+
+None. The cmdlet returns no output on successful deletion.
+
+## Related cmdlets
+
+- [Get-OVUser](/cmdlets/security/get-ovuser)
+- [New-OVUser](/cmdlets/security/new-ovuser)
+- [Set-OVUser](/cmdlets/security/set-ovuser)

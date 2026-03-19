@@ -1,0 +1,130 @@
+---
+title: "Get-OVServerProfileTemplate"
+description: "Retrieve one or more server profile templates from an HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves server profile template resources from an HPE OneView appliance. Supports filtering by name, label, or server hardware type.
+
+## Syntax
+
+```powershell
+Get-OVServerProfileTemplate
+    [-Name <String>]
+    [-ServerHardwareType <Object>]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+```powershell
+Get-OVServerProfileTemplate
+    [-Name <String>]
+    [-Detailed]
+    [-ServerHardwareType <Object>]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+```powershell
+Get-OVServerProfileTemplate
+    [-Name <String>]
+    [-Export]
+    [-Location <String>]
+    [-ServerHardwareType <Object>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVServerProfileTemplate` queries the HPE OneView appliance for server profile template resources. Templates define a reusable configuration baseline for server profiles. When called without parameters, all templates visible within the caller's current scope are returned.
+
+- Use `-Name` to filter by template name (supports wildcard characters).
+- Use `-ServerHardwareType` to return only templates compatible with a given server hardware type.
+- Use `-Label` to filter by assigned label.
+- Use `-Detailed` to include per-category compliance metadata.
+- Use `-Export` with `-Location` to serialise matching templates to JSON files.
+
+## Parameters
+
+<ParamField path="Name" type="string">
+  Name of the template to retrieve. Accepts wildcard characters (`*`). Alias: `profile`.
+</ParamField>
+
+<ParamField path="ServerHardwareType" type="object">
+  Server hardware type object (from `Get-OVServerHardwareType`). When provided, returns only templates targeting that hardware type. Accepts pipeline input.
+</ParamField>
+
+<ParamField path="Label" type="string">
+  Filter results to templates that have been assigned the specified label.
+</ParamField>
+
+<ParamField path="Scope" type="object">
+  Limits results to resources belonging to the specified HPE OneView scope. Defaults to `AllResourcesInScope`.
+</ParamField>
+
+<ParamField path="Detailed" type="switch">
+  Return extended detail, including per-category consistency metadata, for each matching template.
+</ParamField>
+
+<ParamField path="Export" type="switch">
+  Export each matching template to a JSON file. Requires `-Location`. Alias: `x`.
+</ParamField>
+
+<ParamField path="Location" type="string">
+  Directory path where exported JSON files will be written. The directory is created if it does not exist. Requires `-Export`. Alias: `save`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="object">
+  Specifies the HPE OneView appliance connection to query. Defaults to the default connected session. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+### Get all server profile templates
+
+```powershell
+Get-OVServerProfileTemplate
+```
+
+Returns all server profile templates from the default connected appliance.
+
+### Get a template by name
+
+```powershell
+Get-OVServerProfileTemplate -Name 'Hypervisor Cluster Node Template v1'
+```
+
+### Get templates for a specific server hardware type
+
+```powershell
+$SHT = Get-OVServerHardwareType -Name 'SY 480 Gen10 1'
+Get-OVServerProfileTemplate -ServerHardwareType $SHT
+```
+
+Returns all templates compatible with the `SY 480 Gen10 1` hardware type.
+
+### Export all templates to disk
+
+```powershell
+Get-OVServerProfileTemplate -Export -Location 'C:\Backup\Templates'
+```
+
+Exports all server profile templates to JSON files in `C:\Backup\Templates`.
+
+## Output
+
+`HPEOneView.ServerProfileTemplate` — One or more server profile template objects.
+
+## Related cmdlets
+
+- [New-OVServerProfileTemplate](/cmdlets/server-profiles/new-ovserverprofiletemplate)
+- [Remove-OVServerProfileTemplate](/cmdlets/server-profiles/remove-ovserverprofiletemplate)
+- [New-OVServerProfile](/cmdlets/server-profiles/new-ovserverprofile)
+- [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)

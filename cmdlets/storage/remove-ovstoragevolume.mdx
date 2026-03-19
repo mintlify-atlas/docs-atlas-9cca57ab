@@ -1,0 +1,107 @@
+---
+title: "Remove-OVStorageVolume"
+description: "Delete a storage volume from HPE OneView management, with an option to retain the volume on the storage array."
+---
+
+## Synopsis
+
+Removes a storage volume from HPE OneView, either deleting it from the storage array entirely or only removing it from OneView management while preserving the data.
+
+## Syntax
+
+```powershell
+Remove-OVStorageVolume
+    -InputObject <Object>
+    [-ExportOnly]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Remove-OVStorageVolume` removes a storage volume from HPE OneView. By default, it deletes the volume from both HPE OneView and the underlying storage array — this destroys the volume and all data it contains.
+
+Use `-ExportOnly` to remove the volume only from HPE OneView management without touching the physical volume on the array. This is useful when decommissioning a OneView appliance or when ownership of the volume is being transferred to another management system.
+
+<Warning>
+Without `-ExportOnly`, this cmdlet permanently deletes the volume and all its data from the storage array. This action cannot be undone. Ensure the volume is not attached to any server profile before removing it, and verify you have a backup if the data is needed.
+</Warning>
+
+The cmdlet supports `-WhatIf` and `-Confirm` due to its `ConfirmImpact = High` declaration. You will be prompted to confirm deletion unless you pass `-Confirm:$false`.
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The storage volume to remove. Accepts pipeline input from `Get-OVStorageVolume`. Also accepts the volume's URI string or name string. Aliased as `uri`, `name`, and `StorageVolume`.
+</ParamField>
+
+<ParamField path="ExportOnly" type="SwitchParameter">
+  When specified, removes the volume record from HPE OneView management only. The volume and all its data remain intact on the storage array. Use this to "unmanage" a volume without destroying it.
+</ParamField>
+
+<ParamField path="Async" type="SwitchParameter">
+  Returns the task object immediately without waiting for the deletion to complete on the storage array.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  HPE OneView appliance connection. Defaults to the default connected session. Aliased as `Appliance`.
+</ParamField>
+
+<ParamField path="Confirm" type="SwitchParameter">
+  Prompts for confirmation before executing. Use `-Confirm:$false` to suppress the prompt in automation scripts.
+</ParamField>
+
+## Examples
+
+### Remove a volume interactively (with confirmation prompt)
+
+```powershell
+Get-OVStorageVolume -Name "Vol1" | Remove-OVStorageVolume
+```
+
+You will be prompted to confirm before the volume is deleted from the array.
+
+### Remove a volume without a confirmation prompt (automation)
+
+```powershell
+Get-OVStorageVolume -Name "Vol1" | Remove-OVStorageVolume -Confirm:$false
+```
+
+<Warning>
+Skipping the confirmation prompt in automation scripts means there is no safeguard against accidental deletion. Use `-WhatIf` first to validate the target volumes.
+</Warning>
+
+### Dry-run to see what would be deleted
+
+```powershell
+Get-OVStorageVolume | Remove-OVStorageVolume -WhatIf
+```
+
+### Remove a volume from OneView management only (keep data on array)
+
+```powershell
+Get-OVStorageVolume -Name "LegacyVol" | Remove-OVStorageVolume -ExportOnly
+```
+
+The volume record is removed from HPE OneView, but the volume and all its data remain on the storage array.
+
+### Remove all unattached volumes in bulk
+
+```powershell
+Get-OVStorageVolume -Available | Remove-OVStorageVolume -Confirm:$false
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+An asynchronous task tracking the deletion. Pipe to `Wait-OVTaskComplete` to wait for completion before proceeding.
+
+## Related cmdlets
+
+- [Get-OVStorageVolume](/cmdlets/storage/get-ovstoragevolume)
+- [New-OVStorageVolume](/cmdlets/storage/new-ovstoragevolume)
+- [Set-OVStorageVolume](/cmdlets/storage/set-ovstoragevolume)

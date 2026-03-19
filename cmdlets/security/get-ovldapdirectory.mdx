@@ -1,0 +1,100 @@
+---
+title: "Get-OVLdapDirectory"
+description: "Retrieve LDAP and Active Directory authentication directory configurations from an HPE OneView appliance."
+---
+
+## Synopsis
+
+Returns configured authentication directory objects (Active Directory or OpenLDAP) from an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVLdapDirectory
+    [-Name <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**Export configuration to file:**
+
+```powershell
+Get-OVLdapDirectory
+    -Export <String>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVLdapDirectory` retrieves the LDAP and Active Directory authentication directory configurations registered on the appliance. These directories are used to authenticate non-local users. Use the returned objects to inspect directory settings, verify server connectivity, or feed them into other cmdlets.
+
+The `-Export` parameter saves the configuration as JSON files to a specified directory, one file per configured directory per appliance connection.
+
+Wildcard characters are supported in the `Name` parameter.
+
+## Parameters
+
+<ParamField path="Name" type="string">
+  The name of the directory configuration to retrieve. Supports wildcard characters (`*`). When omitted, all configured directories are returned. Aliased as `directory` and `domain`.
+</ParamField>
+
+<ParamField path="Export" type="string">
+  A path to an existing directory on the local file system. When specified, the cmdlet saves each directory's configuration as a JSON file to this location instead of returning objects. Aliased as `x`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object" default="Default connected session">
+  The appliance connection object or name. Defaults to the default connected session. Accepts an array of connections to query multiple appliances. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### List all configured authentication directories
+
+```powershell
+Get-OVLdapDirectory
+```
+
+Returns every authentication directory configured on the default connected appliance.
+
+### Get a specific directory by name
+
+```powershell
+Get-OVLdapDirectory -Name 'corp.example.com'
+```
+
+Returns the directory configuration for `corp.example.com`.
+
+### Use a wildcard to find directories
+
+```powershell
+Get-OVLdapDirectory -Name 'corp*'
+```
+
+Returns all directories whose names begin with `corp`.
+
+### Export directory configurations to JSON files
+
+```powershell
+Get-OVLdapDirectory -Export 'C:\Backups\DirectoryConfigs'
+```
+
+Saves each configured directory as a JSON file in `C:\Backups\DirectoryConfigs`.
+
+## Output
+
+`HPEOneview.Appliance.AuthDirectory`
+
+Each returned object includes the following key properties:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `name` | String | The friendly name of the directory configuration. |
+| `authProtocol` | String | `AD` or `LDAP`. |
+| `baseDN` | String | The base distinguished name for directory searches. |
+| `directoryServers` | Array | The directory server hostnames and ports. |
+| `userNamingAttribute` | String | The LDAP attribute used as the login name (`CN` or `UID`). |
+
+## Related cmdlets
+
+- [New-OVLdapDirectory](/cmdlets/security/new-ovldapdirectory)

@@ -1,0 +1,180 @@
+---
+title: "Update-OVServerProfile"
+description: "Remediate non-compliant server profiles or reapply/refresh specific profile settings."
+---
+
+## Synopsis
+
+Updates server profiles to match their associated server profile template (remediation), reapplies specific categories of settings, or refreshes a profile's state from the hardware.
+
+## Syntax
+
+### Remediate from template (Default)
+
+```powershell
+Update-OVServerProfile
+    [-InputObject] <Object>
+    [-Stage]
+    [-ApplianceConnection <Object>]
+    [-Async]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+### Refresh profile state from hardware
+
+```powershell
+Update-OVServerProfile
+    [-InputObject] <Object>
+    -Refresh
+    [-ApplianceConnection <Object>]
+    [-Async]
+    [<CommonParameters>]
+```
+
+### Reapply specific setting categories
+
+```powershell
+Update-OVServerProfile
+    [-InputObject] <Object>
+    -Reapply
+    [-Baseline]
+    [-AdapterAndBoot]
+    [-Connections]
+    [-LocalStorage]
+    [-SANStorage]
+    [-BIOS]
+    [-Ilo]
+    [-OSDeployment]
+    [-ApplianceConnection <Object>]
+    [-Async]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Update-OVServerProfile` provides three distinct operations, controlled by parameter sets:
+
+**Default (remediate):** Applies changes from the template to bring the profile back into compliance. Use this after modifying a server profile template to push updated settings to all derived profiles. The `-Stage` switch stages the update without applying it immediately.
+
+**Refresh:** Forces HPE OneView to re-read the server's current hardware state and refresh the profile's reported status.
+
+**Reapply:** Re-pushes specific categories of profile settings to the server without requiring the profile to be non-compliant. Useful for recovering settings that have drifted on the server itself. Select one or more category switches: `-Baseline`, `-AdapterAndBoot`, `-Connections`, `-LocalStorage`, `-SANStorage`, `-BIOS`, `-Ilo`, `-OSDeployment`.
+
+<Note>
+Remediation (Default parameter set) requires the server to be powered off, or will power off the server if needed, depending on the settings being applied. Plan remediation windows accordingly.
+</Note>
+
+## Parameters
+
+<ParamField path="InputObject" type="object" required>
+  The server profile object to update, as returned by `Get-OVServerProfile`. Accepts pipeline input. Aliases: `profile`, `ServerProfile`.
+</ParamField>
+
+<ParamField path="Refresh" type="switch">
+  Refresh the profile's state by reading current hardware configuration from the server. Mutually exclusive with `-Reapply`.
+</ParamField>
+
+<ParamField path="Reapply" type="switch">
+  Reapply specific setting categories to the server. Must be combined with at least one category switch. Mutually exclusive with `-Refresh`.
+</ParamField>
+
+<ParamField path="Baseline" type="switch">
+  Reapply the firmware baseline. Valid only with `-Reapply`.
+</ParamField>
+
+<ParamField path="AdapterAndBoot" type="switch">
+  Reapply adapter and boot settings. Valid only with `-Reapply`.
+</ParamField>
+
+<ParamField path="Connections" type="switch">
+  Reapply network connection settings. Valid only with `-Reapply`.
+</ParamField>
+
+<ParamField path="LocalStorage" type="switch">
+  Reapply local storage settings. Valid only with `-Reapply`.
+</ParamField>
+
+<ParamField path="SANStorage" type="switch">
+  Reapply SAN storage settings. Valid only with `-Reapply`.
+</ParamField>
+
+<ParamField path="BIOS" type="switch">
+  Reapply BIOS settings. Valid only with `-Reapply`.
+</ParamField>
+
+<ParamField path="Ilo" type="switch">
+  Reapply iLO settings. Valid only with `-Reapply`.
+</ParamField>
+
+<ParamField path="OSDeployment" type="switch">
+  Reapply OS deployment settings. Valid only with `-Reapply`.
+</ParamField>
+
+<ParamField path="Stage" type="switch">
+  Stage the template update without applying it to the server immediately. Valid only with the Default parameter set.
+</ParamField>
+
+<ParamField path="Async" type="switch">
+  Return a task object immediately without waiting for the operation to complete.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="object">
+  Specifies the HPE OneView appliance connection. Defaults to the default connected session. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+### Find and remediate all non-compliant profiles
+
+```powershell
+# Identify non-compliant profiles
+$nonCompliant = Get-OVServerProfile -NonCompliant
+Write-Host "$($nonCompliant.Count) non-compliant profile(s) found."
+
+# Remediate each profile
+$nonCompliant | Update-OVServerProfile -Confirm:$false | Wait-OVTaskComplete
+```
+
+### Remediate a specific profile
+
+```powershell
+Get-OVServerProfile -Name 'Hyp-Clus-01' | Update-OVServerProfile
+```
+
+Prompts for confirmation, then applies the template to bring `Hyp-Clus-01` back into compliance.
+
+### Refresh a profile's state from hardware
+
+```powershell
+Get-OVServerProfile -Name 'Web-Node-01' | Update-OVServerProfile -Refresh | Wait-OVTaskComplete
+```
+
+### Reapply firmware and BIOS settings
+
+```powershell
+Get-OVServerProfile -Name 'DB-Node-01' |
+    Update-OVServerProfile -Reapply -Baseline -BIOS -Confirm:$false | Wait-OVTaskComplete
+```
+
+Reapplies only the firmware baseline and BIOS settings to `DB-Node-01`, leaving all other settings unchanged.
+
+### Stage a template update without immediate application
+
+```powershell
+Get-OVServerProfile -Name 'Hyp-Clus-01' | Update-OVServerProfile -Stage -Async
+```
+
+Stages the pending template changes so they can be applied during the next maintenance window.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` — An async task object tracking the update operation.
+
+## Related cmdlets
+
+- [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)
+- [Set-OVServerProfile](/cmdlets/server-profiles/set-ovserverprofile)
+- [Get-OVServerProfileTemplate](/cmdlets/server-profiles/get-ovserverprofiletemplate)
+- [Set-OVServerProfileTemplate](/cmdlets/server-profiles/set-ovserverprofiletemplate)

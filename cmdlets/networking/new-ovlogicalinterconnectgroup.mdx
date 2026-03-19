@@ -1,0 +1,330 @@
+---
+title: "New-OVLogicalInterconnectGroup"
+description: "Create a new Logical Interconnect Group to define interconnect policy for HPE OneView enclosure groups."
+---
+
+## Synopsis
+
+Creates a new Logical Interconnect Group (LIG) resource that serves as a configuration template for logical interconnects.
+
+## Syntax
+
+### C7000 enclosure
+
+```powershell
+New-OVLogicalInterconnectGroup
+    -Name <String>
+    -Bays <Hashtable>
+    [-InterconnectConsistencyChecking <String>]
+    [-EnableIgmpSnooping <Boolean>]
+    [-IgmpIdleTimeoutInterval <Int32>]
+    [-EnableFastMacCacheFailover <Boolean>]
+    [-MacRefreshInterval <Int32>]
+    [-EnableNetworkLoopProtection <Boolean>]
+    [-EnablePauseFloodProtection <Boolean>]
+    [-EnableLLDPTagging <Boolean>]
+    [-EnableEnhancedLLDPTLV <Boolean>]
+    [-LldpAddressingMode <String>]
+    [-SNMP <Object>]
+    [-SNMPConsistencyChecking <String>]
+    [-SnmpV1 <Boolean>]
+    [-SnmpV3 <Boolean>]
+    [-SnmpV3User <Object>]
+    [-InternalNetworks <Array>]
+    [-InternalNetworkConsistencyChecking <String>]
+    [-QosConfiguration <Object>]
+    [-QoSConsistencyChecking <String>]
+    [-UplinkSet <Hashtable[]>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### HPE Synergy
+
+```powershell
+New-OVLogicalInterconnectGroup
+    -Name <String>
+    -FrameCount <Int32>
+    -InterconnectBaySet <Int32>
+    -FabricModuleType <String>
+    -Bays <Hashtable>
+    [-InterconnectConsistencyChecking <String>]
+    [-FabricRedundancy <String>]
+    [-DownlinkSpeedMode <String>]
+    [-EnableCutThroughSwitching <Boolean>]
+    [-EnableStormControl <Boolean>]
+    [-StormControlPacketsPerSecondThreshold <Int32>]
+    [-StormControlPollingInterval <Int32>]
+    [-EnableDdns <Boolean>]
+    [-DdnsDomainNameSuffix <String>]
+    [-EnableIgmpSnooping <Boolean>]
+    [-IgmpVLANs <String>]
+    [-IgmpIdleTimeoutInterval <Int32>]
+    [-IgmpMulticastFloodPrevention <Boolean>]
+    [-IgmpProxyReporting <Boolean>]
+    [-IgmpSnoopingConsistencyChecking <String>]
+    [-EnableNetworkLoopProtection <Boolean>]
+    [-EnablePauseFloodProtection <Boolean>]
+    [-EnableLLDPTagging <Boolean>]
+    [-EnableEnhancedLLDPTLV <Boolean>]
+    [-LldpAddressingMode <String>]
+    [-SNMP <Object>]
+    [-SNMPConsistencyChecking <String>]
+    [-SnmpV1 <Boolean>]
+    [-SnmpV3 <Boolean>]
+    [-SnmpV3User <Object>]
+    [-InternalNetworks <Array>]
+    [-InternalNetworkConsistencyChecking <String>]
+    [-QosConfiguration <Object>]
+    [-QoSConsistencyChecking <String>]
+    [-UplinkSet <Hashtable[]>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Import from file
+
+```powershell
+New-OVLogicalInterconnectGroup
+    -Import <Object>
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVLogicalInterconnectGroup` creates a Logical Interconnect Group (LIG) on the HPE OneView appliance. A LIG is a policy template that defines the desired state for interconnect modules installed in an enclosure group, including:
+
+- Bay-to-module type assignments
+- Uplink set definitions (Ethernet, Fibre Channel)
+- SNMP configuration
+- QoS policies
+- Network loop and flood protection settings
+- IGMP snooping configuration
+- Internal network assignments
+
+For **C7000** enclosures, the `-Bays` hashtable maps bay numbers (1–8) to interconnect module types (e.g., `FlexFabric`, `FlexFabric-20/40 F8`).
+
+For **HPE Synergy**, three additional mandatory parameters define the fabric topology: `-FrameCount` (number of frames), `-InterconnectBaySet` (which bay set to use), and `-FabricModuleType` (the Synergy Virtual Connect module type).
+
+After creating the LIG, use `New-OVUplinkSet` to add uplink sets that define the network connectivity through the interconnect module uplink ports.
+
+<Note>
+  `New-OVLogicalInterconnectGroup` returns an async task. Pipe to `Wait-OVTaskComplete` followed by `Get-OVLogicalInterconnectGroup` to retrieve the created LIG object for further operations.
+</Note>
+
+## Parameters
+
+<ParamField path="Name" type="String" required>
+  The name for the new Logical Interconnect Group.
+
+  Alias: `-ligname`.
+</ParamField>
+
+<ParamField path="Bays" type="Hashtable" required>
+  A hashtable that maps interconnect bay numbers to module type strings. For C7000, key is the bay number and value is the module type name.
+
+  Example: `@{1 = "FlexFabric"; 2 = "FlexFabric"}`
+
+  Supports pipeline input.
+</ParamField>
+
+<ParamField path="FrameCount" type="Int32">
+  **(Synergy only, required)** The number of Synergy frames in the logical enclosure group. Valid range: 1–5.
+</ParamField>
+
+<ParamField path="InterconnectBaySet" type="Int32">
+  **(Synergy only, required)** The interconnect bay set number (1–3) that identifies which set of interconnect bays the fabric module occupies.
+</ParamField>
+
+<ParamField path="FabricModuleType" type="String">
+  **(Synergy only, required)** The type of Synergy Virtual Connect fabric module. Accepted values:
+
+  - `SEVC100F32`
+  - `SEVC40F8`
+  - `SEVC32FC`
+  - `SEVC32GCFC`
+  - `SEVCFC`
+  - `SEVC16GbFC`
+  - `SAS`
+</ParamField>
+
+<ParamField path="FabricRedundancy" type="String">
+  **(Synergy only)** The fabric redundancy mode. Accepted values: `HighlyAvailable`, `Redundant` (default), `ASide`, `BSide`.
+</ParamField>
+
+<ParamField path="InterconnectConsistencyChecking" type="String">
+  The consistency checking policy for interconnect bay configuration. Accepted values: `Exact`, `None`.
+</ParamField>
+
+<ParamField path="EnableIgmpSnooping" type="Boolean">
+  When `$true`, enables IGMP snooping on the interconnect. Default: `$false`.
+
+  Alias: `-IGMPSnoop`.
+</ParamField>
+
+<ParamField path="IgmpIdleTimeoutInterval" type="Int32">
+  The interval (in seconds) before an idle IGMP membership is removed. Valid range: 130–1225. Default: 260.
+
+  Alias: `-IGMPIdle`.
+</ParamField>
+
+<ParamField path="EnableFastMacCacheFailover" type="Boolean">
+  **(C7000 only)** When `$true` (default), enables fast MAC cache failover to speed up network convergence.
+
+  Alias: `-FastMAC`.
+</ParamField>
+
+<ParamField path="MacRefreshInterval" type="Int32">
+  **(C7000 only)** The interval (in minutes) between MAC cache refresh cycles. Valid range: 1–30. Default: 5.
+
+  Alias: `-FastMACRefresh`.
+</ParamField>
+
+<ParamField path="EnableNetworkLoopProtection" type="Boolean">
+  When `$true` (default), enables loop protection on downlink ports.
+
+  Alias: `-LoopProtect`.
+</ParamField>
+
+<ParamField path="EnablePauseFloodProtection" type="Boolean">
+  When `$true` (default), enables pause flood protection to prevent network storms caused by Ethernet pause frames.
+
+  Alias: `-PauseProtect`.
+</ParamField>
+
+<ParamField path="EnableLLDPTagging" type="Boolean">
+  When `$true`, enables LLDP (Link Layer Discovery Protocol) tagging. Default: `$false`.
+</ParamField>
+
+<ParamField path="LldpAddressingMode" type="String">
+  The IP addressing mode used for LLDP. Accepted values: `IPv4`, `IPv6`, `IPv4AndIPv6`.
+</ParamField>
+
+<ParamField path="SNMP" type="Object">
+  A hashtable or SNMP configuration object that defines SNMP read community, access list, system contact, and trap destinations.
+
+  Example hashtable keys: `readCommunity`, `enabled`, `systemContact`, `snmpAccess`, `trapDestinations`.
+</ParamField>
+
+<ParamField path="InternalNetworks" type="Array">
+  One or more Ethernet network objects to designate as internal (server-to-server only, not routed through uplinks).
+</ParamField>
+
+<ParamField path="QosConfiguration" type="Object">
+  A QoS configuration object (from `New-OVQosConfig` or similar) that defines traffic classification and priority policies.
+
+  Aliases: `-qos`, `-QosConfig`.
+</ParamField>
+
+<ParamField path="UplinkSet" type="Hashtable[]">
+  One or more uplink set definition hashtables to pre-configure when creating the LIG. Typically you create uplink sets after LIG creation using `New-OVUplinkSet` instead.
+</ParamField>
+
+<ParamField path="Scope" type="HPEOneView.Appliance.ScopeCollection[]">
+  One or more scope objects to assign to the new LIG.
+</ParamField>
+
+<ParamField path="Async" type="Switch">
+  Return the async task object immediately without waiting for completion.
+</ParamField>
+
+<ParamField path="Import" type="Object">
+  Path to a JSON file containing a LIG definition to import.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Create a basic C7000 LIG with SNMP
+
+```powershell
+$LIGName = "LIG Prod"
+$Bays    = @{1 = "FlexFabric"; 2 = "FlexFabric"}
+$SNMP    = @{
+    readCommunity  = "MyTr@p1"
+    enabled        = $true
+    systemContact  = "Network Admin"
+    snmpAccess     = @("192.168.1.2/32", "10.1.1.0/24")
+    trapDestinations = @(
+        @{
+            trapDestination  = "myhost.local"
+            communityString  = "MyTr@p2"
+            trapFormat       = "SNMPv1"
+            trapSeverities   = @("Critical", "Major", "Minor", "Warning", "Normal", "Info", "Unknown")
+            fcTrapCategories = @("PortStatus", "Other")
+        }
+    )
+}
+
+$NewLig = New-OVLogicalInterconnectGroup -Name $LIGName -Bays $Bays -SNMP $SNMP `
+    | Wait-OVTaskComplete `
+    | Get-OVLogicalInterconnectGroup
+```
+
+### Add uplink sets to the LIG after creation
+
+```powershell
+# Retrieve network objects
+$Networks = "red", "blue", "green" | Get-OVNetwork -Type Ethernet
+$FabricA  = Get-OVNetwork -Name "Production Fabric A" -Type FibreChannel
+$FabricB  = Get-OVNetwork -Name "Production Fabric B" -Type FibreChannel
+
+# Add Ethernet uplink set
+$NewLig | New-OVUplinkSet -Name "LUT1" -Type Ethernet `
+    -Networks $Networks `
+    -NativeEthNetwork $Networks[0] `
+    -UplinkPorts "BAY1:X4", "BAY1:X5", "BAY2:X4", "BAY2:X5" `
+    -EthMode Auto
+
+# Refresh LIG and add Fibre Channel uplink sets
+$NewLig = Get-OVLogicalInterconnectGroup -Name $LIGName
+$NewLig | New-OVUplinkSet -Name "Fabric A" -Type FibreChannel -Networks $FabricA -UplinkPorts "BAY1:X1,BAY1:X2"
+
+$NewLig = Get-OVLogicalInterconnectGroup -Name $LIGName
+$NewLig | New-OVUplinkSet -Name "Fabric B" -Type FibreChannel -Networks $FabricB -UplinkPorts "BAY2:X1,BAY2:X2"
+```
+
+### Create a Synergy LIG
+
+```powershell
+$SynergyBays = @{
+    1 = "SEVC40F8"
+    4 = "SEVC40F8"
+}
+
+New-OVLogicalInterconnectGroup `
+    -Name "Synergy-LIG" `
+    -FrameCount 1 `
+    -InterconnectBaySet 1 `
+    -FabricModuleType "SEVC40F8" `
+    -Bays $SynergyBays `
+    -FabricRedundancy Redundant `
+    | Wait-OVTaskComplete
+```
+
+### Import a LIG from a JSON file
+
+```powershell
+New-OVLogicalInterconnectGroup -Import "C:\Config\my-lig.json"
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` when `-Async` is used, or the task result after completion. Pipe to `Get-OVLogicalInterconnectGroup` to retrieve the created LIG object.
+
+## Related cmdlets
+
+- [Get-OVLogicalInterconnectGroup](/cmdlets/networking/get-ovlogicalinterconnectgroup)
+- [Get-OVLogicalInterconnect](/cmdlets/networking/get-ovlogicalinterconnect)
+- [New-OVUplinkSet](/cmdlets/networking/new-ovuplinkset)
+- [Get-OVUplinkSet](/cmdlets/networking/get-ovuplinkset)
+- [Get-OVNetwork](/cmdlets/networking/get-ovnetwork)

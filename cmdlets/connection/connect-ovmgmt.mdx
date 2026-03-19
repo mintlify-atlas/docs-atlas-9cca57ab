@@ -1,0 +1,140 @@
+---
+title: "Connect-OVMgmt"
+description: "Establish an authenticated session to an HPE OneView appliance."
+---
+
+## Synopsis
+
+Authenticate and connect to an HPE OneView appliance, adding the resulting session to the `$ConnectedSessions` global tracker.
+
+## Syntax
+
+### PSCredential (default)
+
+```powershell
+Connect-OVMgmt
+    -Hostname <String>
+    -Credential <PSCredential>
+    [-AuthLoginDomain <String>]
+    [-LoginAcknowledge]
+    [<CommonParameters>]
+```
+
+### Username / Password
+
+```powershell
+Connect-OVMgmt
+    -Hostname <String>
+    -UserName <String>
+    [-Password <Object>]
+    [-AuthLoginDomain <String>]
+    [-LoginAcknowledge]
+    [<CommonParameters>]
+```
+
+### Certificate (2FA / Smart Card)
+
+```powershell
+Connect-OVMgmt
+    -Hostname <String>
+    -Certificate <Object>
+    [-LoginAcknowledge]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Connect-OVMgmt` opens an authenticated session to an HPE OneView appliance and stores the resulting `HPEOneView.Appliance.Connection` object in the global `$ConnectedSessions` collection. The first connection established is automatically set as the default connection used by all subsequent cmdlets that accept `-ApplianceConnection`.
+
+Three authentication flows are supported:
+
+- **PSCredential** — supply a `[PSCredential]` object (recommended).
+- **Username / Password** — supply credentials as plain strings. Both `-UserName` and `-Password` are marked `[Obsolete]`; prefer the PSCredential parameter set.
+- **Certificate** — supply a certificate object for two-factor (smart card) authentication. The appliance must be configured for 2-factor auth.
+
+If the appliance presents a login message that requires acknowledgement and `-LoginAcknowledge` is not specified, the cmdlet prompts interactively. Use `-LoginAcknowledge` in unattended or scripted scenarios.
+
+The cmdlet validates the appliance X-API version on connection and throws a terminating error if the appliance version is too old to be supported by this library version.
+
+## Parameters
+
+<ParamField path="Hostname" type="String" required>
+  FQDN or IP address of the HPE OneView appliance to connect to. Accepts the aliases `Appliance` and `Computername`.
+</ParamField>
+
+<ParamField path="Credential" type="PSCredential" required>
+  A `[PSCredential]` object containing the username and password. Use this parameter set instead of the deprecated `-UserName` / `-Password` parameters. Accepts the alias `PSCredential`.
+</ParamField>
+
+<ParamField path="UserName" type="String">
+  **(Obsolete)** Username for authentication. Prefer `-Credential`. Accepts the aliases `u` and `user`.
+</ParamField>
+
+<ParamField path="Password" type="Object">
+  **(Obsolete)** Password for authentication. Accepts a plain `[String]` or a `[SecureString]`. If omitted while using the `UsernamePassword` parameter set, the cmdlet prompts securely at runtime. Accepts the alias `p`.
+</ParamField>
+
+<ParamField path="AuthLoginDomain" type="String">
+  Name of the authentication directory (login domain) to use. Defaults to `LOCAL` when not specified. LDAP/AD domain names embedded in the username (e.g. `DOMAIN\user` or `user@domain.com`) are detected automatically when this parameter is omitted. Accepts the alias `authProvider`.
+</ParamField>
+
+<ParamField path="Certificate" type="Object" required>
+  Certificate object used for two-factor or smart-card authentication. The appliance must have 2-factor authentication configured. Required for the `Certificate` parameter set.
+</ParamField>
+
+<ParamField path="LoginAcknowledge" type="Switch">
+  Suppresses the interactive login-message acknowledgement prompt. Pass this switch in automated or non-interactive scripts when the appliance is configured with a login message that requires acknowledgement.
+</ParamField>
+
+## Return value
+
+Returns an `HPEOneView.Appliance.Connection` object representing the authenticated session. The object is also added to `$Global:ConnectedSessions`.
+
+## Examples
+
+### Example 1: Connect using a PSCredential object
+
+```powershell
+$credential = Get-Credential -UserName administrator
+$connection = Connect-OVMgmt -Hostname oneview.example.com -Credential $credential
+```
+
+### Example 2: Connect to multiple appliances
+
+```powershell
+$cred = Get-Credential
+Connect-OVMgmt -Hostname ov1.example.com -Credential $cred
+Connect-OVMgmt -Hostname ov2.example.com -Credential $cred
+
+# $ConnectedSessions now contains both connections; the first is the default
+$ConnectedSessions
+```
+
+### Example 3: Connect with an explicit authentication directory
+
+```powershell
+$cred = Get-Credential
+Connect-OVMgmt -Hostname oneview.example.com -Credential $cred -AuthLoginDomain CorpAD
+```
+
+### Example 4: Connect using a certificate (2FA / smart card)
+
+```powershell
+# Load the certificate from the local certificate store
+$cert = Get-Item Cert:\CurrentUser\My\<thumbprint>
+Connect-OVMgmt -Hostname oneview.example.com -Certificate $cert
+```
+
+### Example 5: Connect non-interactively with login-message acknowledgement
+
+```powershell
+$cred = Get-Credential
+Connect-OVMgmt -Hostname oneview.example.com -Credential $cred -LoginAcknowledge
+```
+
+## Related cmdlets
+
+- [Disconnect-OVMgmt](./disconnect-ovmgmt)
+- [Set-OVApplianceDefaultConnection](./set-ovappliancedefaultconnection)
+- [Push-OVAppliancePermission](./push-ovappliancepermission)
+- [Pop-OVAppliancePermission](./pop-ovappliancepermission)

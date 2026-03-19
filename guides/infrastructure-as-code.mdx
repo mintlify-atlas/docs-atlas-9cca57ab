@@ -1,0 +1,359 @@
+---
+title: "Infrastructure as code"
+description: "Use HPE OneView PowerShell for repeatable, idempotent infrastructure provisioning. Covers template-driven deployment, CI/CD integration, error handling, multi-appliance scripting, and generating scripts from existing resources."
+---
+
+HPE OneView PowerShell is well-suited for infrastructure-as-code (IaC) workflows. Every resource can be created, modified, and removed through cmdlets, making it straightforward to express your desired infrastructure state as a script.
+
+## Template-driven server provisioning
+
+Server profile templates are the cornerstone of IaC in OneView. A template encodes the entire desired state of a server: connections, firmware baseline, boot order, local storage, and BIOS settings. Servers are then provisioned by stamping profiles from the template.
+
+### Defining a server profile template
+
+```powershell
+# Get the hardware type and enclosure group
+$SY480Gen10SHT = Get-OVServerHardwareType -Name "SY 480 Gen10 1" -ErrorAction Stop
+$EG            = Get-OVEnclosureGroup -Name "DCS Synergy Default EG" -ErrorAction Stop
+$Baseline      = Get-OVBaseline -FileName "SPP_2017_10_20171215_for_HPE_Synergy_Z7550-96455.iso" -ErrorAction Stop
+
+# Define network connections
+$con1 = Get-OVNetwork -Name "Management Network (VLAN1)" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 1 -Name "Mgmt Connection 1" -Bootable -Priority Primary
+$con2 = Get-OVNetwork -Name "Management Network (VLAN1)" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 2 -Name "Mgmt Connection 2"
+$con3 = Get-OVNetworkSet -Name "Prod NetSet" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 3 -Name "VM Traffic Connection 3"
+$con4 = Get-OVNetworkSet -Name "Prod NetSet" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 4 -Name "VM Traffic Connection 4"
+$con5 = Get-OVNetwork -Name "Prod Fabric A" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 5 -Name "Prod Fabric A Connection 5"
+$con6 = Get-OVNetwork -Name "Prod Fabric B" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 6 -Name "Prod Fabric B Connection 6"
+
+# Define local storage
+$LogicalDisk       = New-OVServerProfileLogicalDisk -Name "Disk 1" -RAID RAID1
+$StorageController = New-OVServerProfileLogicalDiskController -ControllerID Embedded -Mode RAID -Initialize -LogicalDisk $LogicalDisk
+
+# Create the template
+$params = @{
+    Name               = "Hypervisor Cluster Node Template v1"
+    Description        = "Corp standard hypervisor cluster node, version 1.0"
+    ServerHardwareType = $SY480Gen10SHT
+    EnclosureGroup     = $EG
+    Connections        = $con1, $con2, $con3, $con4, $con5, $con6
+    Firmware           = $true
+    Baseline           = $Baseline
+    FirmwareMode       = "FirmwareAndSoftware"
+    BootMode           = "UEFIOptimized"
+    PxeBootPolicy      = "IPv4"
+    ManageBoot         = $true
+    BootOrder          = "HardDisk"
+    LocalStorage       = $true
+    StorageController  = $StorageController
+    HideUnusedFlexnics = $true
+}
+
+New-OVServerProfileTemplate @params | Wait-OVTaskComplete
+```
+
+### Provisioning servers from the template
+
+```powershell
+$SY480Gen10SHT = Get-OVServerHardwareType -Name "SY 480 Gen10 1" -ErrorAction Stop
+$SPT           = Get-OVServerProfileTemplate -Name "Hypervisor Cluster Node Template v1" -ErrorAction Stop
+
+# Find eligible servers: at least 4 cores and 512 GB RAM
+$Servers = Get-OVServer -InputObject $SY480Gen10SHT -NoProfile -ErrorAction Stop |
+    Where-Object { ($_.processorCount * $_.processorCoreCount) -ge 4 -and
+                   $_.memoryMb -ge (512 * 1024) } |
+    Select-Object -First 4
+
+# Power off before assigning profiles
+$Servers | Stop-OVServer -Confirm:$false
+
+# Create profiles asynchronously, one per server
+1..($Servers.Count) | ForEach-Object {
+
+    New-OVServerProfile `
+        -Name "Hyp-Clus-0$_" `
+        -Assignment Server `
+        -Server $Servers[($_ - 1)] `
+        -ServerProfileTemplate $SPT `
+        -Async
+
+}
+
+# Wait for all profile creation tasks to finish
+Get-OVTask -State Running | Wait-OVTaskComplete
+```
+
+## Idempotent operations — check before create
+
+Idempotent scripts produce the same result whether run once or many times. The pattern is: check whether the resource exists, create it only if it does not.
+
+```powershell
+# Idempotent network creation
+function Ensure-OVNetwork {
+    param(
+        [string]$Name,
+        [int]$VlanId,
+        [string]$Purpose = "General"
+    )
+
+    $Existing = Get-OVNetwork -Name $Name -ErrorAction SilentlyContinue
+
+    if ($null -eq $Existing) {
+
+        Write-Host "Creating network '$Name' (VLAN $VlanId)..."
+        New-OVNetwork -Name $Name -Type Ethernet -vlanId $VlanId -smartlink $true -Purpose $Purpose
+
+    } else {
+
+        Write-Host "Network '$Name' already exists, skipping."
+
+    }
+}
+
+Ensure-OVNetwork -Name "Production VLAN 100" -VlanId 100
+Ensure-OVNetwork -Name "Production VLAN 200" -VlanId 200
+```
+
+```powershell
+# Idempotent server profile template creation
+$TemplateName = "Hypervisor Cluster Node Template v1"
+$SPT = Get-OVServerProfileTemplate -Name $TemplateName -ErrorAction SilentlyContinue
+
+if ($null -eq $SPT) {
+
+    Write-Host "Creating server profile template '$TemplateName'..."
+    New-OVServerProfileTemplate @params | Wait-OVTaskComplete
+
+} else {
+
+    Write-Host "Template '$TemplateName' already exists."
+
+}
+```
+
+<Tip>
+Use `-ErrorAction SilentlyContinue` (not `-ErrorAction Stop`) on `Get-OV*` cmdlets in idempotency checks. `-ErrorAction Stop` converts the "not found" condition into a terminating error.
+</Tip>
+
+## Error handling patterns
+
+HPE OneView cmdlets throw typed .NET exceptions. Use `Try / Catch` blocks and match on the specific exception type for precise handling.
+
+### Basic try/catch
+
+```powershell
+Try {
+
+    $Task = Add-OVStorageSystem @params | Wait-OVTaskComplete
+
+}
+
+Catch [HPEOneView.Appliance.AuthSessionException] {
+
+    Write-Error "Authentication failed. Re-run Connect-OVMgmt."
+    Throw
+
+}
+
+Catch [HPEOneView.ResourceNotFoundException] {
+
+    Write-Error "A required resource was not found: $_"
+    Throw
+
+}
+
+Catch {
+
+    # Re-throw all unexpected errors so the caller sees them
+    $PSCmdlet.ThrowTerminatingError($_)
+
+}
+```
+
+### Propagating errors from scripts
+
+When writing a script that will be called by another script or pipeline, use `$PSCmdlet.ThrowTerminatingError($_)` in the catch block. This preserves the original error record including stack trace, unlike a bare `Throw`.
+
+```powershell
+Catch {
+
+    $PSCmdlet.ThrowTerminatingError($_)
+
+}
+```
+
+### Handling the initial password change
+
+```powershell
+Try {
+
+    Connect-OVMgmt -Hostname $Appliance -UserName "Administrator" -Password "admin"
+
+}
+
+Catch [HPEOneView.Appliance.PasswordChangeRequired] {
+
+    Set-OVInitialPassword -OldPassword "admin" -NewPassword $NewPassword -Appliance $Appliance
+
+}
+```
+
+## CI/CD pipeline integration
+
+OneView PowerShell scripts run without modification in standard CI/CD runners. The key considerations are credential handling and non-interactive execution.
+
+### Non-interactive credential handling
+
+Store credentials as pipeline secrets and construct a `PSCredential` at runtime:
+
+```powershell
+# Credentials injected as environment variables by the CI runner
+$SecurePass = ConvertTo-SecureString $env:ONEVIEW_PASSWORD -AsPlainText -Force
+$Credential = [System.Management.Automation.PSCredential]::new($env:ONEVIEW_USERNAME, $SecurePass)
+
+$ApplianceConnection = Connect-OVMgmt -Hostname $env:ONEVIEW_HOST -Credential $Credential
+```
+
+### Example pipeline script structure
+
+```powershell
+#Requires -Module HPEOneView.1000
+
+[CmdletBinding()]
+param (
+    [String]$ApplianceHost  = $env:ONEVIEW_HOST,
+    [String]$Username       = $env:ONEVIEW_USERNAME,
+    [String]$Password       = $env:ONEVIEW_PASSWORD,
+    [String]$TemplateName   = "Hypervisor Cluster Node Template v1",
+    [Int]$ServerCount       = 4
+)
+
+# --- Connect ---
+$SecurePass = ConvertTo-SecureString $Password -AsPlainText -Force
+$Credential = [System.Management.Automation.PSCredential]::new($Username, $SecurePass)
+
+Try {
+
+    $Session = Connect-OVMgmt -Hostname $ApplianceHost -Credential $Credential
+
+}
+
+Catch {
+
+    Write-Error "Failed to connect to $ApplianceHost"
+    Exit 1
+
+}
+
+Try {
+
+    $SPT = Get-OVServerProfileTemplate -Name $TemplateName -ErrorAction Stop
+
+    # Provision servers
+    $Servers = Get-OVServer -NoProfile | Select-Object -First $ServerCount
+    $Servers | Stop-OVServer -Confirm:$false
+
+    1..($Servers.Count) | ForEach-Object {
+
+        New-OVServerProfile `
+            -Name "CI-Node-$_" `
+            -Assignment Server `
+            -Server $Servers[($_ - 1)] `
+            -ServerProfileTemplate $SPT `
+            -Async
+
+    }
+
+    Get-OVTask -State Running | Wait-OVTaskComplete
+
+}
+
+Catch {
+
+    $PSCmdlet.ThrowTerminatingError($_)
+
+}
+
+Finally {
+
+    Disconnect-OVMgmt
+
+}
+```
+
+<Note>
+The `Finally` block ensures `Disconnect-OVMgmt` is called even if the script fails partway through, preventing orphaned sessions on the appliance.
+</Note>
+
+## Using `$ConnectedSessions` for multi-appliance scripts
+
+The global `$ConnectedSessions` variable holds all active connections. Use it to iterate over appliances or to target a specific one.
+
+```powershell
+$Appliances = @("hpov1.example.com", "hpov2.example.com", "hpov3.example.com")
+$Credential = Get-Credential -Username Administrator -Message "Password"
+
+# Connect to all appliances
+ForEach ($Appliance in $Appliances) {
+
+    Connect-OVMgmt -Hostname $Appliance -Credential $Credential
+
+}
+
+# Run a report across all appliances
+ForEach ($Session in $Global:ConnectedSessions) {
+
+    Write-Host "--- $($Session.Name) ---"
+    Get-OVServer -ApplianceConnection $Session | Select-Object name, powerState, status
+
+}
+
+# Check whether a session to a specific appliance already exists before connecting
+if (-not ($Global:ConnectedSessions | Where-Object Name -EQ "hpov2.example.com")) {
+
+    Connect-OVMgmt -Hostname "hpov2.example.com" -Credential $Credential
+
+}
+```
+
+## Generating scripts with `ConvertTo-OVPowerShellScript`
+
+`ConvertTo-OVPowerShellScript` takes an existing OneView resource object and generates the PowerShell code that would recreate it. This is invaluable for bootstrapping IaC scripts from a manually configured environment.
+
+```powershell
+# Generate a script for an existing server profile template
+$SPT = Get-OVServerProfileTemplate -Name "Hypervisor Cluster Node Template v1" -ErrorAction Stop
+$SPT | ConvertTo-OVPowerShellScript
+```
+
+### Exporting to a file
+
+```powershell
+# Export all server profile templates to a single script file
+Get-OVServerProfileTemplate | ConvertTo-OVPowerShellScript -Export "C:\Scripts\templates.ps1"
+
+# Append multiple resources to the same file
+Get-OVNetwork     | ConvertTo-OVPowerShellScript -Export "C:\Scripts\environment.ps1"
+Get-OVNetworkSet  | ConvertTo-OVPowerShellScript -Export "C:\Scripts\environment.ps1" -Append
+Get-OVStoragePool | ConvertTo-OVPowerShellScript -Export "C:\Scripts\environment.ps1" -Append
+```
+
+<Tip>
+Use `ConvertTo-OVPowerShellScript` to capture your current environment as code before making changes. This gives you a known-good baseline you can restore from if needed.
+</Tip>
+
+### Supported resource types
+
+`ConvertTo-OVPowerShellScript` supports a wide range of resource types including:
+
+- Server profile templates and server profiles
+- Ethernet networks, FC networks, and network sets
+- Logical interconnect groups and uplink sets
+- Enclosure groups
+- Storage systems, storage pools, and volume templates
+- Users and LDAP directory configurations

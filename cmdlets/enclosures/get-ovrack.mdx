@@ -1,0 +1,115 @@
+---
+title: "Get-OVRack"
+description: "Retrieve rack objects used to track the physical location of servers, enclosures, and other devices in HPE OneView."
+---
+
+## Synopsis
+
+Retrieve one or more rack objects from the HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVRack
+    [-Name <String>]
+    [-Datacenter <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVRack` retrieves rack resource objects from HPE OneView. A rack represents a physical equipment rack installed in a data center. Racks are used in HPE OneView to:
+
+- Track the physical U-slot location of servers, enclosures, and other managed devices.
+- Model power and cooling load per rack.
+- Contribute to the data center floor layout and capacity plan.
+
+Racks are placed within data centers using `Add-OVRackToDataCenter`. Managed devices (servers and enclosures) are associated with racks using `Add-OVResourceToRack`.
+
+Use `-Name` to filter by rack name. Use `-Datacenter` to return only racks associated with a specific data center.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name (or wildcard pattern) of the rack to retrieve. Supports `*` and `?` wildcard characters.
+
+  Example: `"Rack-*"` returns all racks whose name begins with `Rack-`.
+</ParamField>
+
+<ParamField path="Datacenter" type="Object">
+  Filters results to racks associated with the specified data center. Accepts a data center object returned by `Get-OVDataCenter`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The HPE OneView appliance connection object or connection name. Defaults to the current default connection stored in `${Global:ConnectedSessions}`.
+</ParamField>
+
+## Examples
+
+### Example 1: List all racks
+
+Return all racks defined on the appliance.
+
+```powershell
+Get-OVRack
+```
+
+```
+Name          SerialNumber  Depth  Height  Width  ThermalLimit
+----          ------------  -----  ------  -----  ------------
+Rack-01       CZ1234567AB   1000   2000    600    10000
+Rack-02       CZ1234567CD   1000   2000    600    10000
+Rack-DR-01    CZ9876543EF   1000   2000    600    8000
+```
+
+### Example 2: Get a specific rack by name
+
+Retrieve a single rack and display its properties.
+
+```powershell
+$Rack = Get-OVRack -Name "Rack-01"
+$Rack | Format-List
+```
+
+### Example 3: Filter racks within a data center
+
+Retrieve all racks located in the `Primary DC` data center.
+
+```powershell
+$DC = Get-OVDataCenter -Name "Primary DC"
+Get-OVRack -Datacenter $DC
+```
+
+### Example 4: Filter with a wildcard
+
+Return all racks whose names begin with `Rack-DR-`.
+
+```powershell
+Get-OVRack -Name "Rack-DR-*"
+```
+
+### Example 5: List devices in a rack
+
+Retrieve a rack and then list all devices assigned to it.
+
+```powershell
+$Rack = Get-OVRack -Name "Rack-01"
+$Rack | Get-OVRackMember
+```
+
+## Output
+
+Returns one or more `HPEOneView.Facilities.Rack` objects. Key properties include `name`, `serialNumber`, `depth`, `height`, `width`, `thermalLimit`, `uHeight`, and `uri`.
+
+Returns an empty collection when no matching racks are found.
+
+## Related cmdlets
+
+- `New-OVRack` — Create a new rack.
+- `Set-OVRack` — Modify rack properties.
+- `Remove-OVRack` — Delete a rack.
+- `Get-OVDataCenter` — Retrieve data centers that contain racks.
+- `Add-OVRackToDataCenter` — Place a rack in a data center.
+- `Add-OVResourceToRack` — Assign a managed device (server or enclosure) to a rack slot.
+- `Get-OVRackMember` — List devices assigned to a rack.

@@ -1,0 +1,306 @@
+---
+title: "New-OVUplinkSet"
+description: "Create a new uplink set on a logical interconnect or Logical Interconnect Group."
+---
+
+## Synopsis
+
+Creates a new uplink set resource on a logical interconnect or Logical Interconnect Group.
+
+## Syntax
+
+### Ethernet uplink set
+
+```powershell
+New-OVUplinkSet
+    -InputObject <Object>
+    -Name <String>
+    -Type <String>
+    [-Networks <Array>]
+    [-NetworkSets <Array>]
+    [-NativeEthNetwork <Object>]
+    [-CopyNetworksFromNetworkSet]
+    [-UplinkPorts <Array>]
+    [-EthMode <String>]
+    [-LacpTimer <String>]
+    [-LacpLoadbalancingMode <String>]
+    [-LacpFailoverTrigger <String>]
+    [-LacpDistributeUplinkPorts <Boolean>]
+    [-LacpFailoverBandwidthThreshold <Int32>]
+    [-LacpFailoverActiveMemberThreshold <Int32>]
+    [-PrimaryPort <String>]
+    [-DCBXOverride <Boolean>]
+    [-RoCEVersion <String[]>]
+    [-ConsistencyChecking <String>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Fibre Channel uplink set
+
+```powershell
+New-OVUplinkSet
+    -InputObject <Object>
+    -Name <String>
+    -Type FibreChannel
+    [-Networks <Array>]
+    [-UplinkPorts <Array>]
+    [-PortSpeed <String>]
+    [-FcUplinkSpeed <String>]
+    [-FecMode <String>]
+    [-EnableTrunking <Boolean>]
+    [-ConsistencyChecking <String>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Passthru (returns modified LIG object without saving)
+
+```powershell
+New-OVUplinkSet
+    -InputObject <Object>
+    -Name <String>
+    -Type <String>
+    -Passthru
+    [-Networks <Array>]
+    [-UplinkPorts <Array>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVUplinkSet` creates an uplink set on an existing logical interconnect or Logical Interconnect Group. An uplink set associates a set of uplink ports on an interconnect module with one or more networks, defining how network traffic flows between the server-side downlinks and the data center fabric.
+
+- **Ethernet uplink sets** carry tagged or untagged Ethernet traffic. They reference Ethernet network objects and optionally a native (untagged) network.
+- **Fibre Channel uplink sets** carry FC SAN traffic. They reference Fibre Channel network objects and the FC HBA ports on the interconnect module.
+
+The `-InputObject` parameter accepts a logical interconnect or LIG object. When used against a LIG, changes are committed as a LIG update. When used against a logical interconnect directly, the update applies immediately.
+
+Uplink ports are specified using the format `"BAYn:Xm"` (e.g., `"BAY1:X4"`). Multiple ports can be specified as an array.
+
+<Note>
+  After adding an uplink set, retrieve the LIG again with `Get-OVLogicalInterconnectGroup` before adding additional uplink sets. The object returned by `New-OVUplinkSet` may not reflect the updated state.
+</Note>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The logical interconnect or Logical Interconnect Group object to add the uplink set to. Supports pipeline input.
+
+  Aliases: `-li`, `-lig`, `-ligName`, `-Resource`.
+</ParamField>
+
+<ParamField path="Name" type="String" required>
+  The name for the new uplink set.
+
+  Alias: `-usName`.
+</ParamField>
+
+<ParamField path="Type" type="String" required>
+  The type of uplink set. Accepted values:
+
+  - `Ethernet` — tagged Ethernet networks
+  - `FibreChannel` — FC SAN networks
+  - `Untagged` — single untagged Ethernet network
+  - `Tunnel` — pass-through (no VLAN awareness)
+  - `ImageStreamer` — HPE Synergy Image Streamer deployment network
+
+  Alias: `-usType`.
+</ParamField>
+
+<ParamField path="Networks" type="Array">
+  One or more network objects (from `Get-OVNetwork`) to associate with the uplink set.
+
+  Alias: `-usNetworks`.
+</ParamField>
+
+<ParamField path="NetworkSets" type="Array">
+  One or more network set objects to associate with this Ethernet uplink set. All member networks of the set are included.
+</ParamField>
+
+<ParamField path="CopyNetworksFromNetworkSet" type="Switch">
+  When specified, copies the individual networks from the provided network sets into the uplink set rather than referencing the set directly.
+</ParamField>
+
+<ParamField path="NativeEthNetwork" type="Object">
+  The Ethernet network to designate as the native (untagged) VLAN on this uplink set. Must also be listed in `-Networks`.
+
+  Aliases: `-usNativeEthNetwork`, `-Native`, `-PVID`.
+</ParamField>
+
+<ParamField path="UplinkPorts" type="Array">
+  An array of uplink port identifiers in `"BAYn:Xm"` format (e.g., `"BAY1:X4"`, `"BAY2:X5"`).
+
+  Alias: `-usUplinkPorts`.
+</ParamField>
+
+<ParamField path="EthMode" type="String">
+  The Ethernet port aggregation mode. Accepted values:
+
+  - `Auto` (default) — use LACP to negotiate port aggregation
+  - `Failover` — active/standby failover without LACP
+
+  Alias: `-usEthMode`.
+</ParamField>
+
+<ParamField path="LacpTimer" type="String">
+  The LACP PDU transmission interval. Accepted values: `Short` (default), `Long`.
+</ParamField>
+
+<ParamField path="LacpLoadbalancingMode" type="String">
+  The LACP load balancing algorithm. Accepted values: `None` (default), `DestinationIp`, `DestinationMac`, `SourceAndDestinationIp`, `SourceAndDestinationMac`, `SourceIp`, `SourceMac`.
+</ParamField>
+
+<ParamField path="LacpFailoverTrigger" type="String">
+  Condition that triggers LACP failover. Accepted values: `None`, `AllActiveUplinksOffline`, `FailoverActiveMemberThreshold`, `FailoverBandwidthThreshold`.
+</ParamField>
+
+<ParamField path="PrimaryPort" type="String">
+  The primary uplink port for `Failover` mode, in `"n:m"` format (e.g., `"1:4"`).
+</ParamField>
+
+<ParamField path="PortSpeed" type="String">
+  The Ethernet uplink port speed override. Accepted values: `Auto` (default), `100M`, `1G`, `10G`, `40G`, `100G`.
+</ParamField>
+
+<ParamField path="FcUplinkSpeed" type="String">
+  The Fibre Channel uplink port speed. Accepted values: `Auto` (default), `2`, `4`, `8`, `16`, `32`.
+</ParamField>
+
+<ParamField path="FecMode" type="String">
+  Forward error correction mode. Accepted values: `Auto`, `Cl108`, `Cl74`, `Cl91`, `None`.
+</ParamField>
+
+<ParamField path="EnableTrunking" type="Boolean">
+  When `$true`, enables FC trunking on the uplink ports. Applies to FC uplink sets only.
+</ParamField>
+
+<ParamField path="ConsistencyChecking" type="String">
+  The consistency checking policy for this uplink set. Accepted values: `Exact`, `None`.
+</ParamField>
+
+<ParamField path="Passthru" type="Switch">
+  Return the modified LIG object without committing changes to the appliance. Useful for building complex LIG definitions before a single save operation.
+</ParamField>
+
+<ParamField path="Async" type="Switch">
+  Return the async task object immediately without waiting for completion.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Add an Ethernet uplink set to a LIG
+
+```powershell
+$Networks = "red", "blue", "green" | Get-OVNetwork -Type Ethernet
+
+$NewLig | New-OVUplinkSet `
+    -Name "LUT1" `
+    -Type Ethernet `
+    -Networks $Networks `
+    -NativeEthNetwork $Networks[0] `
+    -UplinkPorts "BAY1:X4", "BAY1:X5", "BAY2:X4", "BAY2:X5" `
+    -EthMode Auto
+```
+
+### Add Fibre Channel uplink sets
+
+```powershell
+$FabricA = Get-OVNetwork -Name "Production Fabric A" -Type FibreChannel
+$FabricB = Get-OVNetwork -Name "Production Fabric B" -Type FibreChannel
+
+# Refresh LIG before each uplink set addition
+$NewLig = Get-OVLogicalInterconnectGroup -Name "LIG Prod"
+$NewLig | New-OVUplinkSet -Name "Fabric A" -Type FibreChannel `
+    -Networks $FabricA `
+    -UplinkPorts "BAY1:X1", "BAY1:X2"
+
+$NewLig = Get-OVLogicalInterconnectGroup -Name "LIG Prod"
+$NewLig | New-OVUplinkSet -Name "Fabric B" -Type FibreChannel `
+    -Networks $FabricB `
+    -UplinkPorts "BAY2:X1", "BAY2:X2"
+```
+
+### Full LIG creation workflow: C7000 with Ethernet and FC uplink sets
+
+```powershell
+# Step 1: Create the LIG
+$LIGName = "LIG Prod"
+$Bays    = @{1 = "FlexFabric"; 2 = "FlexFabric"}
+$SNMP    = @{
+    readCommunity  = "MyTr@p1"
+    enabled        = $true
+    systemContact  = "Network Admin"
+    snmpAccess     = @("192.168.1.2/32", "10.1.1.0/24")
+    trapDestinations = @(
+        @{
+            trapDestination  = "myhost.local"
+            communityString  = "MyTr@p2"
+            trapFormat       = "SNMPv1"
+            trapSeverities   = @("Critical", "Major", "Minor", "Warning", "Normal", "Info", "Unknown")
+            fcTrapCategories = @("PortStatus", "Other")
+        }
+    )
+}
+
+$NewLig = New-OVLogicalInterconnectGroup -Name $LIGName -Bays $Bays -SNMP $SNMP `
+    | Wait-OVTaskComplete `
+    | Get-OVLogicalInterconnectGroup
+
+# Step 2: Add Ethernet uplink set
+$Networks = "red", "blue", "green" | Get-OVNetwork -Type Ethernet
+$NewLig | New-OVUplinkSet -Name "LUT1" -Type Ethernet `
+    -Networks $Networks `
+    -NativeEthNetwork $Networks[0] `
+    -UplinkPorts "BAY1:X4", "BAY1:X5", "BAY2:X4", "BAY2:X5" `
+    -EthMode Auto
+
+# Step 3: Add FC uplink sets (refresh LIG between each)
+$FabricA = Get-OVNetwork -Name "Production Fabric A" -Type FibreChannel
+$FabricB = Get-OVNetwork -Name "Production Fabric B" -Type FibreChannel
+
+$NewLig = Get-OVLogicalInterconnectGroup -Name $LIGName
+$NewLig | New-OVUplinkSet -Name "Fabric A" -Type FibreChannel -Networks $FabricA -UplinkPorts "BAY1:X1,BAY1:X2"
+
+$NewLig = Get-OVLogicalInterconnectGroup -Name $LIGName
+$NewLig | New-OVUplinkSet -Name "Fabric B" -Type FibreChannel -Networks $FabricB -UplinkPorts "BAY2:X1,BAY2:X2"
+```
+
+### Active/Active VC networking: per-side uplink sets
+
+```powershell
+$ANetworks = Get-OVNetwork -Name "Prod Vlan *-A" -Type Ethernet
+$BNetworks = Get-OVNetwork -Name "Prod Vlan *-B" -Type Ethernet
+
+$NewLig | New-OVUplinkSet -Name "LUT1" -Type Ethernet `
+    -Networks $ANetworks `
+    -NativeEthNetwork $ANetworks[0] `
+    -UplinkPorts "BAY1:X4", "BAY1:X5" `
+    -EthMode Auto
+
+$NewLig = Get-OVLogicalInterconnectGroup -Name "My AA Prod"
+$NewLig | New-OVUplinkSet -Name "LUT1" -Type Ethernet `
+    -Networks $BNetworks `
+    -NativeEthNetwork $BNetworks[0] `
+    -UplinkPorts "BAY2:X4", "BAY2:X5" `
+    -EthMode Auto
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` when `-Async` is used. Without `-Async`, the cmdlet waits for task completion. Use `-Passthru` to return the modified LIG object without saving.
+
+## Related cmdlets
+
+- [Get-OVUplinkSet](/cmdlets/networking/get-ovuplinkset)
+- [Get-OVLogicalInterconnectGroup](/cmdlets/networking/get-ovlogicalinterconnectgroup)
+- [New-OVLogicalInterconnectGroup](/cmdlets/networking/new-ovlogicalinterconnectgroup)
+- [Get-OVLogicalInterconnect](/cmdlets/networking/get-ovlogicalinterconnect)
+- [Get-OVNetwork](/cmdlets/networking/get-ovnetwork)

@@ -1,0 +1,106 @@
+---
+title: "Get-OVStorageSystem"
+description: "Retrieve storage systems managed by HPE OneView, including 3PAR, Primera, and Alletra arrays."
+---
+
+## Synopsis
+
+Retrieves one or more storage systems registered with HPE OneView.
+
+## Syntax
+
+```powershell
+Get-OVStorageSystem
+    [-Name <String>]
+    [-Hostname <String>]
+    [-Family <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+```powershell
+Get-OVStorageSystem
+    -SerialNumber <String>
+    [-Family <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVStorageSystem` returns storage system objects from the HPE OneView appliance. You can filter results by display name, hostname, serial number, or storage family. If no filter is provided, all managed storage systems are returned.
+
+Returned objects carry the `HPEOneView.Storage.System` type and can be piped to other storage cmdlets such as `Get-OVStoragePool` and `Add-OVStoragePool`.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  Friendly name of the storage system as shown in HPE OneView. Supports wildcard matching. Aliased as `SystemName`.
+</ParamField>
+
+<ParamField path="Hostname" type="String">
+  IP address or FQDN of the storage system controller used at import time.
+</ParamField>
+
+<ParamField path="SerialNumber" type="String">
+  Serial number of the storage array. Aliased as `SN`. Use the `Serial` parameter set when filtering by serial number.
+</ParamField>
+
+<ParamField path="Family" type="String">
+  Limit results to a specific storage family. Accepted values: `Alletra6000`, `Alletra9000`, `StoreVirtual`, `StoreServ`, `Nimble`, `Primera`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  One or more HPE OneView appliance connection objects. Defaults to the default connected session from `${Global:ConnectedSessions}`. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### List all storage systems
+
+```powershell
+Get-OVStorageSystem
+```
+
+Returns all storage systems managed by the connected appliance.
+
+### Get a storage system by name
+
+```powershell
+$myStorageSystem1 = Get-OVStorageSystem -Name HP3Par_1
+$myStorageSystem2 = Get-OVStorageSystem -Name HP3Par_2
+```
+
+### Get a storage system by hostname
+
+```powershell
+Get-OVStorageSystem -Hostname HPEStoreServ_1-array.contoso.com
+```
+
+### Filter by storage family
+
+```powershell
+Get-OVStorageSystem -Family Primera
+```
+
+Returns only HPE Primera arrays.
+
+### Pipe to Get-OVStoragePool
+
+```powershell
+Get-OVStorageSystem -Name HP3Par_1 | Get-OVStoragePool
+```
+
+Retrieves all storage pools belonging to the named system.
+
+## Output
+
+`HPEOneView.Storage.System`
+
+Each object includes the system name, hostname, family, firmware version, managed domain, storage capacity, and port configuration.
+
+## Related cmdlets
+
+- [Add-OVStorageSystem](/cmdlets/storage/add-ovstoragesystem)
+- [Get-OVStoragePool](/cmdlets/storage/get-ovstoragepool)
+- [New-OVStorageVolume](/cmdlets/storage/new-ovstoragevolume)

@@ -1,0 +1,119 @@
+---
+title: "Disable-OVRemoteSupport"
+description: "Disable HPE Remote Support on a specific server hardware or enclosure managed by HPE OneView."
+---
+
+## Synopsis
+
+Disable HPE Remote Support for an individual server hardware or enclosure resource.
+
+## Syntax
+
+```powershell
+Disable-OVRemoteSupport
+    -InputObject <Object>
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Disable-OVRemoteSupport` disables the HPE Remote Support feature on a specific server hardware or enclosure resource. Once disabled, the device no longer participates in HPE proactive support, case creation, or diagnostic data collection.
+
+The cmdlet issues a PATCH request that sets `supportEnabled` to `false` on the relevant resource's Remote Support settings URI. Supported resource categories are:
+
+- `server-hardware`
+- `enclosures`
+
+The cmdlet prompts for confirmation before disabling. Use `-Confirm:$false` to suppress the prompt in automation scripts. Use `-WhatIf` to see which devices would be affected without making changes.
+
+By default, the cmdlet waits for the task to complete. Pass `-Async` to return the task object immediately and manage completion with `Wait-OVTaskComplete`.
+
+<Warning>
+Disabling Remote Support on a device removes it from HPE proactive monitoring and support case creation until it is re-enabled.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+The server hardware or enclosure resource object on which to disable Remote Support. Must have a `category` of `server-hardware` or `enclosures`.
+
+Can be provided via the pipeline.
+</ParamField>
+
+<ParamField path="Async" type="SwitchParameter">
+Return the async task object immediately without waiting for completion. Use with `Wait-OVTaskComplete`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the value in the `ApplianceConnection` property of the input object.
+</ParamField>
+
+<ParamField path="WhatIf" type="SwitchParameter">
+Preview which resources would have Remote Support disabled without making any changes.
+</ParamField>
+
+<ParamField path="Confirm" type="SwitchParameter">
+Prompt for confirmation before disabling. Enabled by default; pass `-Confirm:$false` to suppress.
+</ParamField>
+
+## Examples
+
+### Disable Remote Support on a specific server
+
+```powershell
+$server = Get-OVServer -Name 'Encl1, Bay 1'
+Disable-OVRemoteSupport -InputObject $server
+```
+
+### Disable Remote Support on an enclosure
+
+```powershell
+$enclosure = Get-OVEnclosure -Name 'MyEnclosure'
+Disable-OVRemoteSupport -InputObject $enclosure
+```
+
+### Disable Remote Support on multiple servers without confirmation
+
+```powershell
+$servers = Get-OVServer | Where-Object { $_.name -match 'Dev-' }
+$tasks   = $servers | ForEach-Object {
+    Disable-OVRemoteSupport -InputObject $_ -Async -Confirm:$false
+}
+$tasks | Wait-OVTaskComplete
+```
+
+### Preview which devices would be affected
+
+```powershell
+Get-OVServer | Disable-OVRemoteSupport -WhatIf
+```
+
+### Disable asynchronously and check result
+
+```powershell
+$server = Get-OVServer -Name 'Encl1, Bay 2'
+$task   = Disable-OVRemoteSupport -InputObject $server -Async -Confirm:$false
+$result = $task | Wait-OVTaskComplete
+
+if ($result.taskState -eq 'Completed')
+{
+    Write-Host "Remote Support disabled successfully."
+}
+```
+
+## Output
+
+When `-Async` is **not** used: `HPEOneview.Appliance.TaskResource` — the completed task.
+
+When `-Async` is used: `HPEOneview.Appliance.TaskResource` — the task object is returned immediately.
+
+## Related cmdlets
+
+- [Enable-OVRemoteSupport](/cmdlets/remote-support/enable-ovremotesupport)
+- [Get-OVRemoteSupport](/cmdlets/remote-support/get-ovremotesupport)
+- [Set-OVRemoteSupport](/cmdlets/remote-support/set-ovremotesupport)
+- [Wait-OVTaskComplete](/cmdlets/alerts/wait-ovtaskcomplete)

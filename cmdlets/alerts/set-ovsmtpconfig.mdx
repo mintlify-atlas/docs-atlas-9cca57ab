@@ -1,0 +1,134 @@
+---
+title: "Set-OVSmtpConfig"
+description: "Configure the SMTP server settings and email alert notification state on an HPE OneView appliance."
+---
+
+## Synopsis
+
+Configure SMTP server address, port, connection security, authentication, sender address, and global alert email state.
+
+## Syntax
+
+### Default — configure SMTP settings
+
+```powershell
+Set-OVSmtpConfig
+    [-SenderEmailAddress <String>]
+    [-Server <String>]
+    [-Port <Int32>]
+    [-ConnectionSecurity <String>]
+    [-Password <Object>]
+    [-AlertEmailEnabled]
+    [-UseMXRecordLookup]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Disabled — disable alert email notifications
+
+```powershell
+Set-OVSmtpConfig
+    -AlertEmailDisabled
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVSmtpConfig` configures the SMTP email notification settings on the appliance. You can set the outbound mail server, TCP port, transport security, authentication password, and the sender email address. You can also globally enable or disable alert email notifications.
+
+Once SMTP is configured, use `Add-OVSmtpAlertEmailFilter` to define which alerts are sent and to which recipients.
+
+By default, the cmdlet waits for any resulting async task to complete before returning. Pass `-Async` to receive the task object immediately and manage completion yourself with `Wait-OVTaskComplete`.
+
+## Parameters
+
+<ParamField path="SenderEmailAddress" type="String">
+The "From" email address used for all outbound alert notifications. Must be a valid RFC 5321 email address.
+</ParamField>
+
+<ParamField path="Server" type="String">
+Hostname or IP address of the SMTP relay server.
+
+Alias: `-SmtpServer`
+</ParamField>
+
+<ParamField path="Port" type="Int32">
+TCP port number for the SMTP connection. Common values: `25` (plain), `587` (STARTTLS), `465` (TLS).
+
+Alias: `-SmtpPort`
+</ParamField>
+
+<ParamField path="ConnectionSecurity" type="String">
+Transport-layer security mode for the SMTP connection. Valid values:
+- `None` (default) — plain text
+- `TLS` — implicit TLS
+- `StartTls` — opportunistic STARTTLS
+</ParamField>
+
+<ParamField path="Password" type="Object">
+Authentication credential for the SMTP server. Accepts a `SecureString` or a plain-text `String`. When a `SecureString` is provided, it is decrypted internally before being sent to the API.
+</ParamField>
+
+<ParamField path="AlertEmailEnabled" type="SwitchParameter">
+Enable global alert email notifications. Mutually exclusive with `-AlertEmailDisabled`.
+</ParamField>
+
+<ParamField path="AlertEmailDisabled" type="SwitchParameter">
+Disable global alert email notifications. When used, this is the only required parameter besides `-ApplianceConnection`.
+</ParamField>
+
+<ParamField path="UseMXRecordLookup" type="SwitchParameter">
+Configure the appliance to resolve the mail server via DNS MX record lookup rather than using a static `-Server` value.
+</ParamField>
+
+<ParamField path="Async" type="SwitchParameter">
+Return the async task object immediately without waiting for completion. Use `Wait-OVTaskComplete` to monitor the task.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Configure basic SMTP with a sender address
+
+```powershell
+Set-OVSmtpConfig -Server 'smtp.corp.example.com' -Port 25 -SenderEmailAddress 'oneview-alerts@corp.example.com' -AlertEmailEnabled
+```
+
+### Configure SMTP with STARTTLS and authentication
+
+```powershell
+$cred = Get-Credential -UserName 'oneview@corp.example.com' -Message 'SMTP password'
+Set-OVSmtpConfig -Server 'smtp.office365.com' -Port 587 -ConnectionSecurity StartTls -SenderEmailAddress 'oneview@corp.example.com' -Password $cred.Password -AlertEmailEnabled
+```
+
+### Disable all email alerting
+
+```powershell
+Set-OVSmtpConfig -AlertEmailDisabled
+```
+
+### Configure asynchronously
+
+```powershell
+$task = Set-OVSmtpConfig -Server 'smtp.corp.example.com' -Port 25 -AlertEmailEnabled -Async
+$task | Wait-OVTaskComplete
+```
+
+## Output
+
+When `-Async` is **not** used: the cmdlet waits for task completion and returns nothing on success.
+
+When `-Async` is used: `HPEOneview.Appliance.TaskResource` — the async task object.
+
+## Related cmdlets
+
+- [Get-OVSMTPConfig](/cmdlets/alerts/get-ovsmtpconfig)
+- [Get-OVSmtpAlertEmailFilter](/cmdlets/alerts/get-ovsmtpalertemailfilter)
+- [Add-OVSmtpAlertEmailFilter](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [Wait-OVTaskComplete](/cmdlets/alerts/wait-ovtaskcomplete)

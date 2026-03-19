@@ -1,0 +1,68 @@
+---
+title: "Get-OVApplianceNetworkConfig"
+description: "Retrieve the network configuration of the HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves the current network configuration of the HPE OneView appliance, including hostname, IPv4/IPv6 settings, DNS servers, and NTP servers.
+
+## Syntax
+
+```powershell
+Get-OVApplianceNetworkConfig
+    [-Location <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVApplianceNetworkConfig` returns the full network configuration of the connected HPE OneView appliance. This includes the appliance hostname, IPv4 and IPv6 addressing mode and addresses, DNS name servers, search domains, and NTP server configuration.
+
+The returned object is typed as `HPEOneview.Appliance.ApplianceServerConfiguration`. Each interface within `applianceNetworks` is typed as `HPEOneview.Appliance.ApplianceServerConfiguration.ApplianceNetworks`.
+
+If `-Location` is specified, the configuration is exported as a JSON file to the given directory path instead of being returned to the pipeline. The file is named `<ApplianceName>_ApplianceNetConf.json`.
+
+## Parameters
+
+<ParamField path="Location" type="String">
+  Directory path to export the network configuration as a JSON file. The path must exist. Alias: `x`, `export`, `exportFile`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specifies the HPE OneView appliance connection(s) to retrieve network configuration from. Defaults to the default connection from `${Global:ConnectedSessions}`. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+**Example 1: Retrieve network configuration from the default appliance connection**
+
+```powershell
+Get-OVApplianceNetworkConfig
+```
+
+Returns the full network configuration object for the default connected appliance.
+
+**Example 2: Export the configuration to a file**
+
+```powershell
+Get-OVApplianceNetworkConfig -Location 'C:\Backup\Appliance'
+```
+
+Exports the appliance network configuration to `C:\Backup\Appliance\myappliance_ApplianceNetConf.json`.
+
+**Example 3: Query a specific appliance connection**
+
+```powershell
+$Connection = Connect-OVMgmt -Hostname 'appliance.domain.com' -Credential $Creds
+Get-OVApplianceNetworkConfig -ApplianceConnection $Connection
+```
+
+Retrieves the network configuration from the specified appliance connection.
+
+## Output
+
+`HPEOneview.Appliance.ApplianceServerConfiguration`
+
+An object containing the full appliance network configuration. The `applianceNetworks` property is an array of network interface objects (`HPEOneview.Appliance.ApplianceServerConfiguration.ApplianceNetworks`), each describing hostname, IPv4/IPv6 type and addresses, DNS name servers, search domains, and domain name. When `-Location` is used, a `System.IO.FileInfo` object for the exported JSON file is returned instead.

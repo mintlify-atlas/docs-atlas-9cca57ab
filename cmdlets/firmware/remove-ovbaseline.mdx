@@ -1,0 +1,101 @@
+---
+title: "Remove-OVBaseline"
+description: "Remove a firmware baseline from the appliance firmware repository."
+---
+
+## Synopsis
+
+Deletes a firmware baseline (SPP or hotfix) from the appliance firmware repository.
+
+## Syntax
+
+```powershell
+Remove-OVBaseline
+    -InputObject <Object>
+    [-Force]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Remove-OVBaseline` permanently removes one or more firmware baseline resources from the appliance firmware repository. Baselines can be passed directly via the `-InputObject` parameter or piped from `Get-OVBaseline`.
+
+The cmdlet uses PowerShell's `SupportsShouldProcess` mechanism with `ConfirmImpact = High`, so a confirmation prompt is displayed by default. Use `-Confirm:$false` to suppress the prompt in automated scripts, or `-WhatIf` to preview the operation without making any changes.
+
+<Warning>
+  Removing a baseline that is referenced by one or more server profiles or server profile templates will cause those profiles to lose their firmware baseline association. Profiles will no longer be compliant and cannot perform firmware operations until a new baseline is assigned. Verify that a baseline is not in use before removing it.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The baseline object to remove. Accepts an `HPEOneView.Appliance.Baseline` object from `Get-OVBaseline` or pipeline input. The object must include a valid `ApplianceConnection` property.
+
+  Aliases: `b`, `Baseline`
+</ParamField>
+
+<ParamField path="Force" type="SwitchParameter">
+  Appends `?force=true` to the DELETE request URI, bypassing safety checks that would otherwise prevent removal of a baseline that is referenced by active resources. Use with caution.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specify one or more appliance connection objects or hostnames. Defaults to all connected appliances (`$Global:ConnectedSessions`).
+
+  Aliases: `Appliance`
+</ParamField>
+
+<ParamField path="WhatIf" type="SwitchParameter">
+  Shows what would happen if the cmdlet runs without actually removing the baseline.
+</ParamField>
+
+<ParamField path="Confirm" type="SwitchParameter">
+  Prompts for confirmation before removing the baseline. Pass `-Confirm:$false` to suppress the prompt.
+</ParamField>
+
+## Examples
+
+### Remove a baseline by name
+
+```powershell
+Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2022.03.01" | Remove-OVBaseline
+```
+
+Retrieves a specific SPP version and removes it from the repository. A confirmation prompt is displayed before the deletion proceeds.
+
+### Remove without confirmation
+
+```powershell
+Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2022.03.01" | Remove-OVBaseline -Confirm:$false
+```
+
+Removes the baseline without prompting. Suitable for automated scripts.
+
+### Preview removal with WhatIf
+
+```powershell
+Get-OVBaseline | Remove-OVBaseline -WhatIf
+```
+
+Shows which baselines would be removed without making any changes.
+
+### Remove all baselines older than a given version
+
+```powershell
+$allBaselines = Get-OVBaseline
+$old = $allBaselines | Where-Object { [datetime]$_.releaseDate -lt [datetime]"2023-01-01" }
+$old | Remove-OVBaseline -Confirm:$false
+```
+
+Removes all baselines with a release date before January 2023 without prompting.
+
+## Output
+
+None. This cmdlet does not return output on success.
+
+## Related cmdlets
+
+- [Get-OVBaseline](/cmdlets/firmware/get-ovbaseline)
+- [Add-OVBaseline](/cmdlets/firmware/add-ovbaseline)

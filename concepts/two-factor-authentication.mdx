@@ -1,0 +1,169 @@
+---
+title: "Two-factor authentication"
+description: "Learn how to authenticate to HPE OneView using standard username/password credentials or smart cards (CAC/PIV) with X.509 certificate-based two-factor authentication."
+---
+
+HPE OneView supports two authentication modes: standard username/password and two-factor authentication using smart cards. The library handles both through `Connect-OVMgmt`, and the resulting connection object records which method was used.
+
+## Standard username/password authentication
+
+The traditional login flow works as follows:
+
+<Steps>
+  <Step title="Provide credentials">
+    The user provides a username and password. The library accepts these as plain text (`-UserName` / `-Password`), as a `[PSCredential]` object (`-Credential`), or prompts interactively if neither is provided.
+  </Step>
+  <Step title="Validate against directory">
+    HPE OneView checks the credentials:
+    - For **local users**, it validates against the HPE OneView internal database.
+    - For **enterprise directory users**, it forwards the credentials to the configured LDAP/Active Directory server.
+  </Step>
+  <Step title="Determine permissions">
+    After successful authentication, HPE OneView assigns permissions:
+    - For local users, permissions are based on the roles configured on the account.
+    - For directory users, HPE OneView retrieves the user's group membership from the directory and maps groups to roles configured in HPE OneView.
+  </Step>
+  <Step title="Return connection object">
+    A successful login returns an `HPEOneView.Appliance.Connection` object with `AuthType` set to `Credential`.
+  </Step>
+</Steps>
+
+```powershell
+# Using PSCredential (recommended)
+$Credential = Get-Credential
+$Connection = Connect-OVMgmt -Hostname myappliance.domain.com -Credential $Credential
+```
+
+<Warning>
+The `-UserName` and `-Password` parameters are marked `[Obsolete]` in the library. Use `-Credential` with a `[PSCredential]` object instead to avoid storing credentials as plaintext.
+</Warning>
+
+## Two-factor authentication with smart cards
+
+Two-factor authentication (2FA) requires two verification factors:
+
+- **Something you possess** — a smart card (Common Access Card / CAC or Personal Identity Verification / PIV card)
+- **Something you know** — the PIN for the smart card
+
+When 2FA is enabled on the appliance, you present a client certificate from the smart card to authenticate. The certificate must be signed by a Certificate Authority (CA) that has been imported into HPE OneView. The appliance validates the certificate and maps the identity in the certificate to a recognized directory user.
+
+<Note>
+The Infrastructure Administrator can customize which fields of the X.509 certificate HPE OneView uses to extract the username and domain. See `Set-OVApplianceTwoFactorAuthentication` for configuration details.
+</Note>
+
+### Getting the certificate from PowerShell
+
+The smart card certificate is accessible through PowerShell's `Cert:` provider. Smart card certificates typically have an Enhanced Key Usage (EKU) of `Smart Card Logon`:
+
+```powershell
+$MyCertificate = Get-ChildItem Cert:\CurrentUser\my |
+    Where-Object { $_.EnhancedKeyUsageList.FriendlyName -match 'Smart Card Logon' }
+```
+
+<Tip>
+If multiple certificates match, examine the `Subject` and `Issuer` fields to identify the correct one. You can also use `$_.Thumbprint` to select by a known certificate thumbprint.
+</Tip>
+
+### Connecting with a certificate
+
+Pass the certificate object to `Connect-OVMgmt` using the `-Certificate` parameter:
+
+```powershell
+Connect-OVMgmt -Hostname myappliance.domain.com -Certificate $MyCertificate
+```
+
+The `-LoginAcknowledge` switch is available on all parameter sets and can be used to suppress login banner acknowledgement prompts:
+
+```powershell
+Connect-OVMgmt -Hostname myappliance.domain.com -Certificate $MyCertificate -LoginAcknowledge
+```
+
+## AuthType in the connection object
+
+The `AuthType` property of the resulting `HPEOneView.Appliance.Connection` object reflects how authentication was performed:
+
+| AuthType value | Authentication method |
+|---|---|
+| `Credential` | Username and password (local user or directory) |
+| `Certificate` | X.509 smart card / CAC / PIV two-factor authentication |
+
+To inspect the authentication type after connecting:
+
+```powershell
+$ConnectedSessions[0].AuthType
+# Certificate
+
+$ConnectedSessions[0].AuthLoginDomain
+# corp.example.com
+```
+
+The `AuthLoginDomain` property is set to the Active Directory authentication directory that validated the certificate.
+
+## Examining permissions after 2FA login
+
+After a certificate-based login, `ActivePermissions` works identically to a standard login. The property contains the full set of `HPEOneView.Appliance.ConnectionPermission` objects available to the authenticated user:
+
+```powershell
+$ConnectedSessions[0].ActivePermissions
+```
+
+```
+RoleName              ScopeName    Active
+--------              ---------    ------
+Infrastructure admin  AllResources True
+Server administrator  Site A       True
+```
+
+Each entry has `ScopeName`, `RoleName`, and `Active` properties. To reduce to a subset of these permissions for a scoped task, use `Push-OVAppliancePermission`. See [connection permissions](/concepts/connection-permissions) for details.
+
+## Using scopes to filter resources
+
+Scopes define named subsets of resources. When a scope is applied to a cmdlet's `-Scope` parameter, only resources that are members of that scope are returned.
+
+Scopes can be used to filter the following resource types:
+
+- Enclosures
+- Server hardware
+- Networks (Ethernet, FC, and FCoE)
+- Network sets
+- Interconnects (excluding SAS resources)
+- Logical interconnects (excluding SAS resources)
+- Logical interconnect groups (excluding SAS resources)
+- Switches
+- Logical switches
+- Logical switch groups
+
+To filter a resource query by scope:
+
+```powershell
+$MyScopeObject = Get-OVScope -Name MyScope -ErrorAction Stop
+Get-OVNetwork -Scope $MyScopeObject
+```
+
+```
+    Type: Ethernet
+
+Name            Status Purpose Type   VlanID IPv4Subnet Smartlink PrivateNetwork PreferredBandwidth MaxBandwidth
+----            ------ ------- ----   ------ ---------- --------- -------------- ------------------ ------------
+Dev VLAN 101-A  OK     General Tagged 101    None       True      False          2500               20000
+Dev VLAN 101-B  OK     General Tagged 101    None       True      False          2500               20000
+Dev VLAN 102-A  OK     General Tagged 102    None       True      False          2500               20000
+Dev VLAN 102-B  OK     General Tagged 102    None       True      False          2500               20000
+
+    Type: Fibre Channel
+
+Name     Status Type         TypicalBandwidth MaxBandwidth AutoLoginRedistribution LinkStabilityInterval ManagedSAN
+----     ------ ----         ---------------- ------------ ----------------------- --------------------- ----------
+Fabric A OK     FabricAttach 4000             20000        True                    30                    SA
+Fabric B OK     FabricAttach 4000             20000        True                    30                    SA
+```
+
+By default, cmdlets return all resources visible to the authenticated user based on their `ActivePermissions`. The `-Scope` parameter narrows this to a specific named subset.
+
+## See also
+
+- [Appliance connections](/concepts/appliance-connections) — How connection objects and $ConnectedSessions work
+- [Connection permissions](/concepts/connection-permissions) — Reduce session privileges with Push-OVAppliancePermission
+- [Scopes and roles](/concepts/scopes-and-roles) — Built-in roles and how scopes restrict access
+- `Get-Help Connect-OVMgmt`
+- `Get-Help Set-OVApplianceTwoFactorAuthentication`

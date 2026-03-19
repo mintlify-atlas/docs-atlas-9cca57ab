@@ -1,0 +1,89 @@
+---
+title: "Copy-OVServerProfile"
+description: "Copy an existing server profile to a new profile with a different name."
+---
+
+## Synopsis
+
+Creates a copy of an existing server profile under a new name, optionally assigning the copy to a different server.
+
+## Syntax
+
+```powershell
+Copy-OVServerProfile
+    [-InputObject] <Object>
+    [-DestinationName <String>]
+    [-Assign <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Copy-OVServerProfile` duplicates a server profile, including all its settings — connections, boot configuration, firmware policy, and local storage — under a new name. The copy is independent of the source; changes to one do not affect the other.
+
+Use `-Assign` to assign the new profile to a specific server hardware resource at copy time. If `-Assign` is omitted the copy is left unassigned.
+
+If `-DestinationName` is omitted, HPE OneView generates a name of the form `Copy of <SourceName>`.
+
+<Note>
+Virtual MAC addresses, WWNs, and serial numbers in the copy are newly allocated and will differ from those in the source profile.
+</Note>
+
+## Parameters
+
+<ParamField path="InputObject" type="object" required>
+  The source server profile object to copy, as returned by `Get-OVServerProfile`. Accepts pipeline input. Aliases: `sname`, `src`, `SourceName`.
+</ParamField>
+
+<ParamField path="DestinationName" type="string">
+  Name for the new (copied) server profile. Defaults to `Copy of <SourceName>`. Alias: `dname`, `dst`.
+</ParamField>
+
+<ParamField path="Assign" type="object" default="unassigned">
+  Server hardware object or name to assign the copied profile to. Defaults to `unassigned`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="object">
+  Specifies the HPE OneView appliance connection. Defaults to the default connected session. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+### Copy a profile and leave it unassigned
+
+```powershell
+$source = Get-OVServerProfile -Name 'Hyp-Clus-01'
+Copy-OVServerProfile -InputObject $source -DestinationName 'Hyp-Clus-05'
+```
+
+Creates `Hyp-Clus-05` as an unassigned copy of `Hyp-Clus-01`.
+
+### Copy a profile via the pipeline and assign to a server
+
+```powershell
+$targetServer = Get-OVServer -Name 'Encl1, Bay 5'
+
+Get-OVServerProfile -Name 'Hyp-Clus-01' |
+    Copy-OVServerProfile -DestinationName 'Hyp-Clus-05' -Assign $targetServer
+```
+
+Creates `Hyp-Clus-05` and immediately assigns it to the server at `Encl1, Bay 5`.
+
+### Copy and let HPE OneView generate the name
+
+```powershell
+Get-OVServerProfile -Name 'Web-Node-01' | Copy-OVServerProfile
+```
+
+Creates a new profile named `Copy of Web-Node-01`.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` — An async task object tracking the copy operation.
+
+## Related cmdlets
+
+- [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)
+- [New-OVServerProfile](/cmdlets/server-profiles/new-ovserverprofile)
+- [Remove-OVServerProfile](/cmdlets/server-profiles/remove-ovserverprofile)

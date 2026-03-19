@@ -1,0 +1,90 @@
+---
+title: "Push-OVAppliancePermission"
+description: "Reduce the active permissions on an appliance session to a specified subset (least privilege)."
+---
+
+## Synopsis
+
+Switch the current appliance session to a restricted set of permissions, implementing a least-privilege model for the duration of a task.
+
+## Syntax
+
+```powershell
+Push-OVAppliancePermission
+    -SetActivePermissions <Array>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Push-OVAppliancePermission` submits a session-update request to the appliance that activates only the roles and scopes specified in `-SetActivePermissions`, deactivating all others for that session. This enables a least-privilege workflow where elevated roles are only exercised when explicitly needed.
+
+Internally the cmdlet:
+
+1. Compares the requested permissions against the session's current active permissions.
+2. If a difference exists, posts the new permission set to the appliance session endpoint.
+3. Updates the `SessionID` on the `HPEOneView.Appliance.Connection` object in `$ConnectedSessions`.
+4. Marks deactivated permissions as inactive and the requested permissions as active on the local connection object.
+
+Use `Pop-OVAppliancePermission` to restore all permissions to active.
+
+The `-SetActivePermissions` array should contain `HPEOneView.Appliance.ConnectionPermission` objects, such as those returned by `Connect-OVMgmt` (available via `$ConnectedSessions.ActivePermissions`).
+
+## Parameters
+
+<ParamField path="SetActivePermissions" type="Array" required>
+  An array of `HPEOneView.Appliance.ConnectionPermission` objects representing the subset of permissions to activate for the session. Only roles and scopes present in this array will be active; all other permissions in the session are deactivated.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection on which to apply the permission change. Accepts an `HPEOneView.Appliance.Connection` object or name string. Accepts pipeline input by property name and the alias `Appliance`.
+
+  Defaults to the current default connection (`$ConnectedSessions | Where-Object Default`) when not specified.
+</ParamField>
+
+## Return value
+
+Returns the `ActivePermissions` collection of the updated `HPEOneView.Appliance.Connection` object, reflecting the new permission state.
+
+## Examples
+
+### Example 1: Activate only a single Infrastructure Administrator role
+
+```powershell
+# Get all available permissions
+$allPerms = ($ConnectedSessions | Where-Object Default).ActivePermissions
+
+# Select just the Infrastructure Administrator role with no scope restriction
+$reducedPerms = $allPerms | Where-Object { $_.RoleName -eq 'Infrastructure administrator' -and [String]::IsNullOrWhiteSpace($_.ScopeUri) }
+
+Push-OVAppliancePermission -SetActivePermissions $reducedPerms
+```
+
+### Example 2: Scope-restricted permissions for a specific scope
+
+```powershell
+$scopedPerm = ($ConnectedSessions | Where-Object Default).ActivePermissions |
+    Where-Object { $_.RoleName -eq 'Server administrator' -and $_.ScopeName -eq 'Datacenter-A' }
+
+Push-OVAppliancePermission -SetActivePermissions $scopedPerm
+
+# Perform scoped operations ...
+
+# Restore all permissions
+Pop-OVAppliancePermission
+```
+
+### Example 3: Target a non-default appliance connection
+
+```powershell
+$conn = $ConnectedSessions | Where-Object Name -eq 'ov2.example.com'
+$perms = $conn.ActivePermissions | Where-Object RoleName -eq 'Read only'
+
+Push-OVAppliancePermission -SetActivePermissions $perms -ApplianceConnection $conn
+```
+
+## Related cmdlets
+
+- [Pop-OVAppliancePermission](./pop-ovappliancepermission)
+- [Connect-OVMgmt](./connect-ovmgmt)

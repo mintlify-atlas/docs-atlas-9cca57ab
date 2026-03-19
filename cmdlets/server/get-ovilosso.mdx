@@ -1,0 +1,126 @@
+---
+title: "Get-OVIloSso"
+description: "Generate an iLO Single Sign-On (SSO) URL or a Redfish REST API session token for a server hardware resource."
+---
+
+## Synopsis
+
+Retrieves an iLO Single Sign-On URL or Redfish session token for a server managed by HPE OneView.
+
+## Syntax
+
+**SSO browser URL (default)**
+
+```powershell
+Get-OVIloSso
+    -InputObject <Object>
+    [-RemoteConsoleOnly]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**Redfish REST API session**
+
+```powershell
+Get-OVIloSso
+    -InputObject <Object>
+    -IloRestSession
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVIloSso` requests a Single Sign-On token from the HPE OneView appliance for the target server's iLO. The appliance uses the server's iLO trust relationship to issue a time-limited SSO token on behalf of the logged-in HPE OneView user.
+
+Two modes are supported:
+
+- **Default**: Returns the iLO web UI SSO URL. Open this URL in a browser to access the iLO interface without re-authenticating.
+- **IloRestSession**: Returns a Redfish session token object (`X-Auth-Token`) that can be used to make authenticated calls directly against the iLO Redfish API.
+
+The `InputObject` parameter accepts either a server hardware object or a server profile object. When a server profile is provided, the SSO token is generated for the underlying server hardware.
+
+<Note>
+SSO tokens are short-lived. The browser URL must be opened promptly after generation, and Redfish session tokens expire after a period of inactivity. If the token expires, run `Get-OVIloSso` again to obtain a new one.
+</Note>
+
+<Note>
+The `-SkipCertificateCheck` parameter is obsolete and has no effect. Certificate validation is controlled by the iLO trust configuration on the appliance.
+</Note>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The server hardware or server profile object for which to generate the iLO SSO token. Accepts pipeline input. The `Server` alias is also accepted.
+</ParamField>
+
+<ParamField path="RemoteConsoleOnly" type="Switch">
+  Generate an SSO URL that opens directly to the iLO Remote Console (HTML5 KVM) rather than the iLO web UI home page.
+</ParamField>
+
+<ParamField path="IloRestSession" type="Switch">
+  Return a Redfish session token object instead of a browser URL. The returned object contains the `X-Auth-Token` header value and the iLO Redfish base URI.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session. Accepted from the pipeline by property name.
+</ParamField>
+
+## Examples
+
+### Open the iLO web UI via SSO
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 1"
+$ssoUrl = Get-OVIloSso -InputObject $server
+Start-Process $ssoUrl.IloSsoUrl
+```
+
+Retrieves the iLO SSO URL for `Encl1, bay 1` and opens it in the default browser.
+
+### Open the iLO remote console directly
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 1"
+$ssoUrl = Get-OVIloSso -InputObject $server -RemoteConsoleOnly
+Start-Process $ssoUrl.IloSsoUrl
+```
+
+Generates an SSO URL that navigates directly to the HTML5 remote console.
+
+### Get a Redfish REST API session token
+
+```powershell
+$server  = Get-OVServer -Name "Encl1, bay 1"
+$session = Get-OVIloSso -InputObject $server -IloRestSession
+
+# Use the token in a direct Redfish API call
+$headers = @{ 'X-Auth-Token' = $session.SecurityToken }
+$uri     = "https://$($session.RootUri)/redfish/v1/Systems/1"
+Invoke-RestMethod -Uri $uri -Headers $headers
+```
+
+Retrieves a Redfish session token and uses it to query the iLO Redfish API directly.
+
+### SSO from a server profile object
+
+```powershell
+Get-OVServerProfile -Name "Web-01" | Get-OVIloSso
+```
+
+Pipes a server profile object to `Get-OVIloSso`. The cmdlet resolves the underlying server hardware and returns the SSO URL.
+
+## Output
+
+**Default / RemoteConsoleOnly**: `HPEOneView.Library.IloSsoUrl`
+
+Contains an `IloSsoUrl` string property with the complete SSO URL including the embedded token.
+
+**IloRestSession**: `HPEOneView.Library.IloRestSession`
+
+Contains `SecurityToken`, `RootUri`, and session metadata for use with Redfish API calls.
+
+## Related cmdlets
+
+- [Get-OVServer](/cmdlets/server/get-ovserver)
+- [Add-OVServer](/cmdlets/server/add-ovserver)

@@ -1,0 +1,118 @@
+---
+title: "Restart-OVServer"
+description: "Restart a server hardware resource with a graceful reboot or cold boot."
+---
+
+## Synopsis
+
+Restarts a server hardware resource managed by HPE OneView.
+
+## Syntax
+
+**Graceful restart (default)**
+
+```powershell
+Restart-OVServer
+    [-Server] <Object>
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+**Cold boot**
+
+```powershell
+Restart-OVServer
+    [-Server] <Object>
+    -ColdBoot
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Restart-OVServer` initiates a restart of the specified server hardware. By default, it sends a graceful reset signal via the iLO (equivalent to pressing the reset button). Use `-ColdBoot` to perform a full power cycle: the server is powered off and then back on.
+
+The server must be powered on to restart. If the server is already off, use `Start-OVServer` instead.
+
+The cmdlet accepts server hardware objects or server profile objects from the pipeline.
+
+<Warning>
+Using `-ColdBoot` immediately cuts power to the server without a graceful OS shutdown. This can result in data loss or file system corruption if the operating system is running.
+</Warning>
+
+## Parameters
+
+<ParamField path="Server" type="Object" required>
+  The server hardware or server profile object to restart. Accepts pipeline input.
+</ParamField>
+
+<ParamField path="ColdBoot" type="Switch">
+  Perform a cold boot (full power cycle) instead of a graceful reset. This parameter is mandatory for the `ColdBoot` parameter set.
+</ParamField>
+
+<ParamField path="Async" type="Switch">
+  Return the async task object immediately without waiting for the operation to complete.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session. Accepted from the pipeline by property name.
+</ParamField>
+
+<ParamField path="Confirm" type="Switch">
+  Prompts for confirmation before restarting the server.
+</ParamField>
+
+## Examples
+
+### Graceful restart
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 3"
+Restart-OVServer -Server $server
+```
+
+Sends a graceful reset to `Encl1, bay 3` and waits for the task to complete.
+
+### Restart using the pipeline
+
+```powershell
+Get-OVServer -Name "Encl1, bay 3" | Restart-OVServer
+```
+
+Pipes the server object directly to `Restart-OVServer`.
+
+### Cold boot a server
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 3"
+Restart-OVServer -Server $server -ColdBoot
+```
+
+Performs a full power cycle. Power is cut immediately and then restored.
+
+### Asynchronous restart
+
+```powershell
+$task = Get-OVServer -Name "Encl1, bay 3" | Restart-OVServer -Async
+$task | Wait-OVTaskComplete
+```
+
+Submits the restart as an async task and then waits for it to complete.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+Returns an async task resource for the restart operation.
+
+## Related cmdlets
+
+- [Start-OVServer](/cmdlets/server/start-ovserver)
+- [Stop-OVServer](/cmdlets/server/stop-ovserver)
+- [Get-OVServer](/cmdlets/server/get-ovserver)

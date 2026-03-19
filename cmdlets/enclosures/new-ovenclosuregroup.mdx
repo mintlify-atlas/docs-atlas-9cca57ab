@@ -1,0 +1,218 @@
+---
+title: "New-OVEnclosureGroup"
+description: "Create a new enclosure group that maps interconnect bays to Logical Interconnect Groups."
+---
+
+## Synopsis
+
+Create a new enclosure group on the HPE OneView appliance.
+
+## Syntax
+
+**Default**
+
+```powershell
+New-OVEnclosureGroup
+    -Name <String>
+    -LogicalInterconnectGroupMapping <Object>
+    [-EnclosureCount <Int>]
+    [-PowerRedundantMode <String>]
+    [-IPv4AddressType <String>]
+    [-IPv4AddressRange <Object>]
+    [-IPv6AddressType <String>]
+    [-IPv6AddressRange <Object>]
+    [-DeploymentNetworkType <String>]
+    [-DeploymentNetwork <Object>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**Import from JSON file**
+
+```powershell
+New-OVEnclosureGroup
+    -ImportFile <String>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVEnclosureGroup` creates an enclosure group, which is the configuration template that governs how enclosures and their interconnect bays are managed by HPE OneView.
+
+The most important input is `-LogicalInterconnectGroupMapping`, which defines which Logical Interconnect Group (LIG) governs each interconnect bay. For HPE Synergy, a single LIG object covers multiple frames and bays. For HPE BladeSystem c-Class, you typically provide a hashtable mapping bay numbers to LIG objects.
+
+**HPE Synergy enclosure groups** can span multiple frames (up to 5) using `-EnclosureCount`. The `-IPv4AddressType` and related parameters control how the management network addresses are assigned to interconnect modules.
+
+**HPE BladeSystem c-Class enclosure groups** span a single frame (`EnclosureCount = 1`) and require you to specify a LIG or a bay-to-LIG hashtable.
+
+<Note>
+Before creating an enclosure group, create the Logical Interconnect Group(s) using `New-OVLogicalInterconnectGroup`. The LIG must exist before it can be referenced here.
+</Note>
+
+## Parameters
+
+<ParamField path="Name" type="String" required>
+  The display name for the new enclosure group.
+</ParamField>
+
+<ParamField path="LogicalInterconnectGroupMapping" type="Object" required>
+  Specifies the mapping of interconnect bays to Logical Interconnect Groups. Accepts:
+
+  - A single LIG object (applies to all bays in the group).
+  - A hashtable mapping bay numbers (c-Class) or frame/bay keys (Synergy) to LIG objects.
+
+  Aliased as `-logicalInterconnectGroup` and `-logicalInterconnectGroupUri`. Also accepts pipeline input.
+</ParamField>
+
+<ParamField path="EnclosureCount" type="Int">
+  The number of enclosures (frames) to include in the group. Valid range: 1–5. Default is `1`.
+
+  Applies to HPE Synergy multi-frame groups. Leave at `1` for c-Class enclosures.
+</ParamField>
+
+<ParamField path="PowerRedundantMode" type="String">
+  The power redundancy mode for the enclosure group. Valid values:
+
+  - `RedundantPowerFeed` (default) — Each blade has redundant power feeds.
+  - `RedundantPowerSupply` — Redundant power supplies within the enclosure.
+</ParamField>
+
+<ParamField path="IPv4AddressType" type="String">
+  How IPv4 addresses are assigned to interconnect modules. Valid values:
+
+  - `DHCP` (default)
+  - `AddressPool` — Use an address range defined in HPE OneView.
+  - `External` — Addresses are managed outside of HPE OneView.
+</ParamField>
+
+<ParamField path="IPv4AddressRange" type="Object">
+  An address pool range object from HPE OneView, used when `-IPv4AddressType` is `AddressPool`. Aliased as `-AddressPool`.
+</ParamField>
+
+<ParamField path="IPv6AddressType" type="String">
+  How IPv6 addresses are assigned. Valid values: `DHCP` (default), `AddressPool`, `External`.
+</ParamField>
+
+<ParamField path="IPv6AddressRange" type="Object">
+  An IPv6 address pool range object, used when `-IPv6AddressType` is `AddressPool`.
+</ParamField>
+
+<ParamField path="DeploymentNetworkType" type="String">
+  Controls OS deployment network integration. Valid values: `None` (default), `Internal`, `External`.
+</ParamField>
+
+<ParamField path="DeploymentNetwork" type="Object">
+  The network object used for OS deployment, when `-DeploymentNetworkType` is `Internal` or `External`.
+</ParamField>
+
+<ParamField path="Scope" type="HPEOneView.Appliance.ScopeCollection[]">
+  One or more scope objects to assign to the new enclosure group. Use `Get-OVScope` to retrieve scope objects.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The HPE OneView appliance connection. Defaults to the current default session.
+</ParamField>
+
+<ParamField path="ImportFile" type="String">
+  Path to a JSON file containing a previously exported enclosure group definition. The parent directory must exist.
+</ParamField>
+
+## Examples
+
+### Example 1: Create an enclosure group for HPE BladeSystem c-Class
+
+This example is taken from `CreateEnclosureGroup_Sample.ps1`. It creates a LIG, adds uplink sets, then creates the enclosure group.
+
+```powershell
+# Create the Logical Interconnect Group
+$LIGName = "LIG Prod"
+$Bays    = @{1 = "FlexFabric"; 2 = "FlexFabric"}
+$SNMP    = @{
+    readCommunity = "MyTr@p1"
+    enabled       = $True
+    systemContact = "Network Admin"
+    snmpAccess    = @("192.168.1.2/32", "10.1.1.0/24")
+    trapDestinations = @(@{
+        trapDestination = "myhost.local"
+        communityString = "MyTr@p2"
+        trapFormat      = "SNMPv1"
+        trapSeverities  = @("Critical", "Major", "Minor", "Warning", "Normal", "Info", "Unknown")
+        fcTrapCategories = @("PortStatus", "Other")
+    })
+}
+
+$NewLig = New-OVLogicalInterconnectGroup -Name $LIGName -Bays $Bays -Snmp $SNMP |
+    Wait-OVTaskComplete |
+    Get-OVLogicalInterconnectGroup
+
+# Add Ethernet and FC uplink sets
+$Networks = "red","blue","green" | Get-OVNetwork -Type Ethernet
+$FabricA  = Get-OVNetwork -Name "Production Fabric A" -Type FibreChannel
+$FabricB  = Get-OVNetwork -Name "Production Fabric B" -Type FibreChannel
+
+$NewLig | New-OVUplinkSet -Name LUT1 -Type Ethernet -Networks $Networks `
+    -NativeEthNetwork $Networks[0] -UplinkPorts "BAY1:X4","BAY1:X5","BAY2:X4","BAY2:X5" -EthMode Auto
+$NewLig = Get-OVLogicalInterconnectGroup -Name $LIGName
+$NewLig | New-OVUplinkSet -Name "Fabric A" -Type FibreChannel -Networks $FabricA -UplinkPorts "BAY1:X1,BAY1:X2"
+$NewLig = Get-OVLogicalInterconnectGroup -Name $LIGName
+$NewLig | New-OVUplinkSet -Name "Fabric B" -Type FibreChannel -Networks $FabricB -UplinkPorts "BAY2:X1,BAY2:X2"
+
+# Create the enclosure group
+$enclGroup = New-OVEnclosureGroup `
+    -Name                        "Prod VC FlexFabric Group 1" `
+    -LogicalInterconnectGroupMapping $NewLig
+```
+
+### Example 2: Create a multi-frame HPE Synergy enclosure group
+
+This example creates a three-frame Synergy enclosure group with DHCP-assigned interconnect addresses, based on `ComposerApplianceConfig_Sample.ps1`.
+
+```powershell
+# Build the Synergy LIG
+$SynergyLigParams = @{
+    Name               = 'Default Synergy LIG'
+    InterconnectBaySet = 3
+    FabricModuleType   = 'SEVC40F8'
+    FrameCount         = 3
+    FabricRedundancy   = 'HighlyAvailable'
+    Bays               = @{
+        Frame1 = @{Bay3 = 'SEVC40f8'; Bay6 = 'SE20ILM'}
+        Frame2 = @{Bay3 = 'SE20ILM';  Bay6 = 'SEVC40f8'}
+        Frame3 = @{Bay3 = 'SE20ILM';  Bay6 = 'SE20ILM'}
+    }
+}
+
+$LIG = New-OVLogicalInterconnectGroup @SynergyLigParams | Get-OVLogicalInterconnectGroup
+
+# Create enclosure group spanning three Synergy frames
+$EgParams = @{
+    Name                            = 'Synergy Default EG'
+    EnclosureCount                  = 3
+    LogicalInterconnectGroupMapping = $LIG
+    IPv4AddressType                 = 'DHCP'
+}
+
+$CreateEGResults = New-OVEnclosureGroup @EgParams
+```
+
+### Example 3: Import an enclosure group from a JSON file
+
+Create an enclosure group from a previously exported JSON definition.
+
+```powershell
+New-OVEnclosureGroup -ImportFile "C:\Backups\enclosure-group-definition.json"
+```
+
+## Output
+
+Returns an `HPEOneView.EnclosureGroup` object representing the newly created enclosure group. Key properties include `name`, `enclosureCount`, `interconnectBayMappings`, and `uri`.
+
+## Related cmdlets
+
+- `Get-OVEnclosureGroup` — Retrieve existing enclosure groups.
+- `Set-OVEnclosureGroup` — Modify an existing enclosure group.
+- `Remove-OVEnclosureGroup` — Delete an enclosure group.
+- `New-OVLogicalInterconnectGroup` — Create the LIG referenced by the enclosure group.
+- `Add-OVEnclosure` — Add a c-Class enclosure using the new group.

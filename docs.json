@@ -1,122 +1,218 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "HPE OneView PowerShell Library",
+  "theme": "linden",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#00B388",
+    "light": "#E6F7F3",
+    "dark": "#006B52"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/HewlettPackard/POSH-HPEOneView"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/HewlettPackard/POSH-HPEOneView"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "installation"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "concepts/appliance-connections",
+              "concepts/connection-permissions",
+              "concepts/two-factor-authentication",
+              "concepts/scopes-and-roles"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Guides",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "guides/connecting-to-appliance",
+              "guides/server-management",
+              "guides/networking",
+              "guides/storage-management",
+              "guides/firmware-management",
+              "guides/infrastructure-as-code"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Sample Scripts",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "samples/overview",
+              "samples/appliance-configuration",
+              "samples/server-profiles",
+              "samples/networking-samples",
+              "samples/storage-samples"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Cmdlet Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Connection Management",
             "pages": [
-              "api-reference/introduction"
+              "cmdlets/connection/connect-ovmgmt",
+              "cmdlets/connection/disconnect-ovmgmt",
+              "cmdlets/connection/set-ovappliancedefaultconnection",
+              "cmdlets/connection/push-ovappliancepermission",
+              "cmdlets/connection/pop-ovappliancepermission"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Appliance Management",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "cmdlets/appliance/get-ovappliancenetworkconfig",
+              "cmdlets/appliance/set-ovappliancenetworkconfig",
+              "cmdlets/appliance/get-ovappliancedatetime",
+              "cmdlets/appliance/set-ovappliancedatetime",
+              "cmdlets/appliance/get-ovapplianceglobalsetting",
+              "cmdlets/appliance/set-ovapplianceglobalsetting",
+              "cmdlets/appliance/get-ovhealthstatus",
+              "cmdlets/appliance/get-ovversion",
+              "cmdlets/appliance/restart-ovappliance",
+              "cmdlets/appliance/get-ovauditlog"
+            ]
+          },
+          {
+            "group": "Server Management",
+            "pages": [
+              "cmdlets/server/get-ovserver",
+              "cmdlets/server/add-ovserver",
+              "cmdlets/server/remove-ovserver",
+              "cmdlets/server/set-ovserverpower",
+              "cmdlets/server/restart-ovserver",
+              "cmdlets/server/start-ovserver",
+              "cmdlets/server/stop-ovserver",
+              "cmdlets/server/get-ovserverhardwaretype",
+              "cmdlets/server/get-ovilosso",
+              "cmdlets/server/update-ovserver"
+            ]
+          },
+          {
+            "group": "Server Profiles",
+            "pages": [
+              "cmdlets/server-profiles/get-ovserverprofile",
+              "cmdlets/server-profiles/new-ovserverprofile",
+              "cmdlets/server-profiles/set-ovserverprofile",
+              "cmdlets/server-profiles/remove-ovserverprofile",
+              "cmdlets/server-profiles/copy-ovserverprofile",
+              "cmdlets/server-profiles/convert-ovserverprofile",
+              "cmdlets/server-profiles/get-ovserverprofiletemplate",
+              "cmdlets/server-profiles/new-ovserverprofiletemplate",
+              "cmdlets/server-profiles/set-ovserverprofiletemplate",
+              "cmdlets/server-profiles/remove-ovserverprofiletemplate",
+              "cmdlets/server-profiles/update-ovserverprofile"
+            ]
+          },
+          {
+            "group": "Networking",
+            "pages": [
+              "cmdlets/networking/get-ovnetwork",
+              "cmdlets/networking/new-ovnetwork",
+              "cmdlets/networking/set-ovnetwork",
+              "cmdlets/networking/remove-ovnetwork",
+              "cmdlets/networking/get-ovnetworkset",
+              "cmdlets/networking/new-ovnetworkset",
+              "cmdlets/networking/get-ovlogicalinterconnect",
+              "cmdlets/networking/get-ovlogicalinterconnectgroup",
+              "cmdlets/networking/new-ovlogicalinterconnectgroup",
+              "cmdlets/networking/get-ovuplinkset",
+              "cmdlets/networking/new-ovuplinkset"
+            ]
+          },
+          {
+            "group": "Storage",
+            "pages": [
+              "cmdlets/storage/get-ovstoragesystem",
+              "cmdlets/storage/add-ovstoragesystem",
+              "cmdlets/storage/get-ovstoragepool",
+              "cmdlets/storage/get-ovstoragevolume",
+              "cmdlets/storage/new-ovstoragevolume",
+              "cmdlets/storage/set-ovstoragevolume",
+              "cmdlets/storage/remove-ovstoragevolume",
+              "cmdlets/storage/get-ovstoragevolumetemplate"
+            ]
+          },
+          {
+            "group": "Enclosures & Infrastructure",
+            "pages": [
+              "cmdlets/enclosures/get-ovenclosure",
+              "cmdlets/enclosures/add-ovenclosure",
+              "cmdlets/enclosures/get-ovenclosuregroup",
+              "cmdlets/enclosures/new-ovenclosuregroup",
+              "cmdlets/enclosures/get-ovlogicalenclosure",
+              "cmdlets/enclosures/get-ovdatacenter",
+              "cmdlets/enclosures/get-ovrack"
+            ]
+          },
+          {
+            "group": "Firmware",
+            "pages": [
+              "cmdlets/firmware/get-ovbaseline",
+              "cmdlets/firmware/add-ovbaseline",
+              "cmdlets/firmware/remove-ovbaseline",
+              "cmdlets/firmware/get-ovpendingupdate",
+              "cmdlets/firmware/install-ovupdate",
+              "cmdlets/firmware/show-ovfirmwarereport",
+              "cmdlets/firmware/update-ovserverfirmware"
+            ]
+          },
+          {
+            "group": "Users & Security",
+            "pages": [
+              "cmdlets/security/get-ovuser",
+              "cmdlets/security/new-ovuser",
+              "cmdlets/security/set-ovuser",
+              "cmdlets/security/remove-ovuser",
+              "cmdlets/security/get-ovrole",
+              "cmdlets/security/get-ovscope",
+              "cmdlets/security/new-ovscope",
+              "cmdlets/security/get-ovldapdirectory",
+              "cmdlets/security/new-ovldapdirectory"
+            ]
+          },
+          {
+            "group": "Alerts & Monitoring",
+            "pages": [
+              "cmdlets/alerts/get-ovalert",
+              "cmdlets/alerts/set-ovalert",
+              "cmdlets/alerts/clear-ovalert",
+              "cmdlets/alerts/get-ovsmtpconfig",
+              "cmdlets/alerts/set-ovsmtpconfig",
+              "cmdlets/alerts/get-ovsmtpalertemailfilter",
+              "cmdlets/alerts/get-ovtask",
+              "cmdlets/alerts/wait-ovtaskcomplete"
+            ]
+          },
+          {
+            "group": "Remote Support",
+            "pages": [
+              "cmdlets/remote-support/get-ovremotesupport",
+              "cmdlets/remote-support/set-ovremotesupport",
+              "cmdlets/remote-support/enable-ovremotesupport",
+              "cmdlets/remote-support/disable-ovremotesupport"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

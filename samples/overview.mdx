@@ -1,0 +1,92 @@
+---
+title: Sample Scripts Overview
+description: A collection of ready-to-run PowerShell sample scripts demonstrating common HPE OneView automation tasks.
+---
+
+The POSH-HPEOneView library ships with a set of sample scripts that cover the most common day-zero and day-two operations for HPE OneView and HPE Synergy environments. Each script is self-contained and designed to be run against a real appliance after substituting environment-specific values.
+
+All samples are located in the `Samples/` directory of the module repository.
+
+<Warning>
+Sample scripts contain placeholder credentials and IP addresses. Review every script carefully and replace all hard-coded values before running against a production appliance.
+</Warning>
+
+## Available samples
+
+<CardGroup cols={2}>
+  <Card title="Appliance Configuration" icon="server" href="/samples/appliance-configuration">
+    Configure a freshly deployed HPE OneView or Synergy Composer appliance end-to-end: EULA acceptance, networking, NTP, certificates, LDAP/AD authentication, local users, SAN managers, and baselines.
+
+    **Scripts:** `ApplianceConfig_Sample.ps1`, `ComposerApplianceConfig_Sample.ps1`
+  </Card>
+
+  <Card title="Server Profiles" icon="microchip" href="/samples/server-profiles">
+    Create Server Profile Templates for blade and rack servers, then deploy Server Profiles from those templates. Covers UEFI boot, firmware management, local storage RAID, and multi-connection networking.
+
+    **Scripts:** `Server_Profile_Template_Multiconnection_Sample.ps1`, `Server_Profile_Template_Rack_Server_Sample.ps1`, `Server_Multiconnection_Sample.ps1`
+  </Card>
+
+  <Card title="Networking" icon="network-wired" href="/samples/networking-samples">
+    Define Ethernet and Fibre Channel networks, create network sets, and build Logical Interconnect Groups with uplink sets. Includes both single Virtual Connect and Active/Active configurations.
+
+    **Scripts:** `DefineNetworks_Sample.ps1`, `DefineNetworks_AA_VC_Sample.ps1`, `DefineLogicalInterconnectGroup_Sample.ps1`
+  </Card>
+
+  <Card title="Storage" icon="database" href="/samples/storage-samples">
+    Add HPE Primera / 3PAR storage systems, create storage pools and volumes, and attach SAN volumes to Server Profiles with full zoning managed by OneView.
+
+    **Scripts:** `AddStorageSystem_Sample.ps1`, `Server_Multiconnection_SAN_Storage_Sample.ps1`
+  </Card>
+
+  <Card title="Add Monitored Servers" icon="eye">
+    Bulk-import rack servers into HPE OneView in monitored mode by reading a CSV file of iLO addresses and credentials. Handles the 64-concurrent-task limit automatically.
+
+    **Script:** `AddServers_Monitored_Sample.ps1`
+  </Card>
+
+  <Card title="Enclosure Group" icon="cubes">
+    Create a Logical Interconnect Group with Ethernet and Fibre Channel uplink sets, then wrap it in an Enclosure Group ready for enclosure import.
+
+    **Script:** `CreateEnclosureGroup_Sample.ps1`
+  </Card>
+</CardGroup>
+
+## Prerequisites
+
+Before running any sample:
+
+1. Install the HPEOneView PowerShell module:
+   ```powershell
+   Install-Module HPEOneView.700
+   ```
+2. Ensure your workstation can reach the appliance management IP.
+3. Review and update all placeholder values (IP addresses, passwords, hostnames, VLAN IDs, etc.).
+4. Run PowerShell 5.1 or PowerShell 7+ as appropriate for your environment.
+
+## Running the samples
+
+Most samples either prompt for connection details or connect automatically if `$ConnectedSessions` is already populated:
+
+```powershell
+# Connect once, then run any sample
+$ApplianceConnection = Connect-OVMgmt -Hostname myoneview.domain.local `
+    -Credential (Get-Credential)
+
+# Now dot-source or call the sample script
+. .\Samples\DefineNetworks_Sample.ps1
+```
+
+The appliance-configuration scripts are parameterized and must be called with explicit arguments:
+
+```powershell
+.\ApplianceConfig_Sample.ps1 `
+    -vm_ipaddr     10.0.0.50 `
+    -Hostname      oneview.corp.local `
+    -NewPassword   (Read-Host -AsSecureString 'New admin password') `
+    -IPv4Address   10.0.0.51 `
+    -IPv4SubnetMask 255.255.255.0 `
+    -IPv4Gateway   10.0.0.1 `
+    -IPv4DnsServers 10.0.0.10,10.0.0.11 `
+    -DnsDomainName corp.local `
+    -IPv4NtpServers 10.0.0.20
+```

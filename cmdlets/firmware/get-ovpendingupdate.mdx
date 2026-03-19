@@ -1,0 +1,87 @@
+---
+title: "Get-OVPendingUpdate"
+description: "Retrieve a pending HPE OneView appliance software update that has been staged but not yet installed."
+---
+
+## Synopsis
+
+Returns information about a pending HPE OneView appliance software update that has been uploaded and staged but not yet installed.
+
+## Syntax
+
+```powershell
+Get-OVPendingUpdate
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVPendingUpdate` queries the appliance for any software update that has been staged via `Install-OVUpdate -Stage` but not yet applied. If a pending update exists, it returns an `HPEOneview.Appliance.Update.Pending` object containing the update file name, version, and related metadata.
+
+This cmdlet is distinct from firmware baseline operations. It applies exclusively to the HPE OneView management appliance software itself — not to the firmware on managed servers or enclosures.
+
+If no pending update is found, the cmdlet returns nothing (an empty result).
+
+## Parameters
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specify one or more appliance connection objects or hostnames. Defaults to the default connected appliance (`$Global:ConnectedSessions | Where-Object Default`).
+
+  Aliases: `Appliance`
+</ParamField>
+
+## Examples
+
+### Check for a pending update
+
+```powershell
+Get-OVPendingUpdate
+```
+
+Returns the pending update object if one exists, or nothing if no update has been staged.
+
+### Check a specific appliance
+
+```powershell
+Get-OVPendingUpdate -ApplianceConnection hpov.example.com
+```
+
+Checks for a staged update on the named appliance.
+
+### Check and install if a pending update exists
+
+```powershell
+$pending = Get-OVPendingUpdate
+if ($pending) {
+    Write-Host "Pending update found: $($pending.fileName) version $($pending.version)"
+    Install-OVUpdate -InstallNow
+}
+```
+
+Retrieves the pending update status and conditionally proceeds with installation.
+
+### View the pending update details
+
+```powershell
+Get-OVPendingUpdate | Format-List
+```
+
+Displays all properties of the staged update object.
+
+## Output
+
+`HPEOneview.Appliance.Update.Pending`
+
+Returned when a staged update is found. Notable properties:
+
+| Property | Description |
+|---|---|
+| `fileName` | File name of the staged update package |
+| `version` | Version string of the pending update |
+
+If no pending update exists, the cmdlet returns nothing.
+
+## Related cmdlets
+
+- [Install-OVUpdate](/cmdlets/firmware/install-ovupdate)

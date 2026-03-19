@@ -1,0 +1,147 @@
+---
+title: "Get-OVBaseline"
+description: "Retrieve firmware baseline (SPP) resources from the appliance firmware repository."
+---
+
+## Synopsis
+
+Retrieves HPE Service Pack for ProLiant (SPP) firmware baseline objects stored in the appliance firmware repository.
+
+## Syntax
+
+```powershell
+# List all baselines or filter by ISO file name
+Get-OVBaseline
+    [-File <Object>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+
+# Filter by SPP name and optional version
+Get-OVBaseline
+    -SppName <String>
+    [-Version <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+
+# Return only hotfix entries
+Get-OVBaseline
+    [-HotfixesOnly]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVBaseline` queries the appliance firmware repository and returns one or more `HPEOneView.Appliance.Baseline` objects representing uploaded Service Pack for ProLiant (SPP) ISO files or individual hotfix packages.
+
+You can filter results by the ISO file name, the SPP display name, the baseline version string, or by returning only hotfix entries. The returned objects can be piped directly to `Update-OVServerFirmware`, `Show-OVFirmwareReport`, or `Remove-OVBaseline`.
+
+When multiple appliances are connected, results from all appliances are returned unless you specify `-ApplianceConnection`.
+
+## Parameters
+
+<ParamField path="File" type="Object">
+  The ISO file name (or `System.IO.FileInfo` object) of the baseline to find. Accepts wildcards. This parameter is used when you know the exact uploaded file name on the appliance.
+
+  Aliases: `isoFileName`, `FileName`
+</ParamField>
+
+<ParamField path="SppName" type="String" required>
+  The display name of the SPP baseline. Accepts wildcards (e.g., `"HPE Service Pack*"`). Required when using the **BaselineName** parameter set.
+
+  Aliases: `name`
+</ParamField>
+
+<ParamField path="Version" type="String">
+  The version string of the SPP baseline (e.g., `"2023.11.01"`). Use with `-SppName` to narrow results to a specific release.
+</ParamField>
+
+<ParamField path="HotfixesOnly" type="SwitchParameter">
+  When specified, returns only individual hotfix packages rather than full SPP ISOs.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Limit results to baselines within the specified scope(s). Accepts scope objects returned by `Get-OVScope`. Defaults to `AllResourcesInScope`, which returns all baselines visible to the current user's active permissions.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specify one or more appliance connection objects or hostnames. Defaults to all connected appliances (`$Global:ConnectedSessions`).
+
+  Aliases: `Appliance`
+</ParamField>
+
+## Examples
+
+### List all firmware baselines
+
+```powershell
+Get-OVBaseline
+```
+
+Returns all SPP baselines stored in the appliance firmware repository.
+
+### Find a baseline by SPP name
+
+```powershell
+Get-OVBaseline -SppName "HPE Service Pack for ProLiant"
+```
+
+Returns all versions of the named SPP baseline.
+
+### Find a specific SPP version
+
+```powershell
+Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+```
+
+Returns the baseline matching both the name and version string.
+
+### Find a baseline by uploaded file name
+
+```powershell
+Get-OVBaseline -File "SPP2023.11.01.iso"
+```
+
+Looks up the baseline by its ISO file name as stored on the appliance.
+
+### List all hotfix packages
+
+```powershell
+Get-OVBaseline -HotfixesOnly
+```
+
+Returns only individual hotfix entries (`.exe`, `.scexe`, `.rpm`, `.zip`, `.fwpkg`), not full SPP bundles.
+
+### Use result in a firmware compliance report
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+Get-OVServer | Show-OVFirmwareReport -Baseline $baseline
+```
+
+Retrieves a specific baseline and uses it to generate a firmware compliance report for all managed servers.
+
+## Output
+
+`HPEOneView.Appliance.Baseline`
+
+Each returned object includes the following notable properties:
+
+| Property | Description |
+|---|---|
+| `name` | Display name of the SPP |
+| `version` | SPP version string |
+| `isoFileName` | File name of the uploaded ISO |
+| `releaseDate` | SPP release date |
+| `fwComponents` | Collection of individual firmware components included in the bundle |
+| `uri` | REST URI of the baseline resource |
+
+## Related cmdlets
+
+- [Add-OVBaseline](/cmdlets/firmware/add-ovbaseline)
+- [Remove-OVBaseline](/cmdlets/firmware/remove-ovbaseline)
+- [Show-OVFirmwareReport](/cmdlets/firmware/show-ovfirmwarereport)
+- [Update-OVServerFirmware](/cmdlets/firmware/update-ovserverfirmware)

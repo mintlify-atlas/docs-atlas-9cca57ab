@@ -1,0 +1,90 @@
+---
+title: "Get-OVRemoteSupport"
+description: "Retrieve the HPE Remote Support configuration and registration status from one or more HPE OneView appliances."
+---
+
+## Synopsis
+
+Get the HPE Remote Support global configuration and portal registration status.
+
+## Syntax
+
+```powershell
+Get-OVRemoteSupport
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVRemoteSupport` retrieves the appliance-level HPE Remote Support configuration. The returned object combines data from both the Remote Support registration endpoint and the configuration endpoint, providing a unified view of:
+
+- Whether the appliance is registered with the HPE Remote Support portal.
+- Whether Remote Support is enabled.
+- The company name configured for support entitlement.
+- Whether marketing opt-in is enabled.
+- Whether automatic enablement of new devices is configured.
+- Whether email notifications for Remote Support events are enabled.
+
+Use `Set-OVRemoteSupport` to change the configuration, and `Enable-OVRemoteSupport` or `Disable-OVRemoteSupport` to toggle Remote Support on individual servers or enclosures.
+
+## Parameters
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Get Remote Support configuration from the default appliance
+
+```powershell
+Get-OVRemoteSupport
+```
+
+### Check whether Remote Support is enabled
+
+```powershell
+$rs = Get-OVRemoteSupport
+if ($rs.EnableRemoteSupport)
+{
+    Write-Host "Remote Support is enabled for company: $($rs.CompanyName)"
+}
+else
+{
+    Write-Warning "Remote Support is not enabled."
+}
+```
+
+### Get configuration from all connected appliances
+
+```powershell
+$ConnectedSessions | ForEach-Object {
+    Get-OVRemoteSupport -ApplianceConnection $_
+} | Select-Object CompanyName, EnableRemoteSupport, AutoEnableDevices, ApplianceConnection
+```
+
+## Output
+
+`HPEOneView.Appliance.RemoteSupport.Configuration`
+
+Key properties:
+
+| Property | Type | Description |
+|---|---|---|
+| `Registered` | Boolean | Whether the appliance is registered with the HPE Remote Support portal |
+| `EnableRemoteSupport` | Boolean | Whether Remote Support is currently enabled |
+| `CompanyName` | String | Company name associated with the support contract |
+| `MarketingOptIn` | Boolean | Whether HPE marketing communications opt-in is active |
+| `AutoEnableDevices` | Boolean | Whether newly added devices automatically have Remote Support enabled |
+| `EnableEmailNotification` | Boolean | Whether Remote Support email notifications are active |
+| `Created` | DateTime | When the configuration was first created |
+| `Modified` | DateTime | When the configuration was last modified |
+| `ApplianceConnection` | Object | Appliance the configuration was retrieved from |
+
+## Related cmdlets
+
+- [Set-OVRemoteSupport](/cmdlets/remote-support/set-ovremotesupport)
+- [Enable-OVRemoteSupport](/cmdlets/remote-support/enable-ovremotesupport)
+- [Disable-OVRemoteSupport](/cmdlets/remote-support/disable-ovremotesupport)
+- [Get-OVRemoteSupportContact](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage

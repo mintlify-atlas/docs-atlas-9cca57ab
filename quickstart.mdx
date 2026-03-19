@@ -1,80 +1,178 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Connect to your HPE OneView appliance and run your first commands in minutes."
 ---
 
-## Get started in three steps
+This guide walks you through installing the HPE OneView PowerShell Library, connecting to an appliance, and running a set of basic commands to verify everything is working.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before you begin, confirm your environment meets the following requirements:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+| Requirement | Minimum version |
+|---|---|
+| PowerShell (Windows) | 5.1 or 7.x |
+| PowerShell (Linux / macOS) | 7.x (PowerShell Core) |
+| .NET Framework (Windows PS 5.1 only) | 4.7.2 |
+| HPE OneView appliance | 10.00 |
 
-### Step 2: Deploy your changes
+<Note>
+  Windows PowerShell 4.0 and earlier are not supported. Windows 10 1709 (Fall Creators Update) or newer is required on Windows due to the .NET Framework 4.7.2 dependency.
+</Note>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+## Connect and run your first commands
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+<Steps>
+  <Step title="Install the module">
+    Install the library from the PowerShell Gallery. Run this command in an elevated PowerShell session (Run as Administrator on Windows).
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```powershell
+    Install-Module HPEOneView.1000
+    ```
 
-### Step 3: Go live
+    If you are prompted to trust the repository, enter `Y` to accept.
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    <Tip>
+      If you do not have administrator rights, install for the current user only:
+
+      ```powershell
+      Install-Module HPEOneView.1000 -Scope CurrentUser
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="Import the module">
+    Load the module into your PowerShell session:
+
+    ```powershell
+    Import-Module HPEOneView.1000
+    ```
+
+    Verify the module loaded correctly:
+
+    ```powershell
+    Get-Module HPEOneView.1000
+    ```
+
+    You should see output showing the module name and version `10.0.4265.2221`.
+
+    <Warning>
+      Only one version of the HPE OneView PowerShell library can be loaded at a time. If another `HPEOneView.*` module is already imported, the import will fail. Start a new PowerShell session if needed.
+    </Warning>
+  </Step>
+
+  <Step title="Connect to your appliance">
+    Establish a session with your HPE OneView appliance using `Connect-OVMgmt`. Replace `MyAppliance.FQDN.Name` with your appliance's hostname or IP address.
+
+    ```powershell
+    # Connect using a PSCredential object (recommended)
+    $credential = Get-Credential
+    Connect-OVMgmt -Hostname MyAppliance.FQDN.Name -Credential $credential
+    ```
+
+    After a successful connection, the cmdlet returns a connection object and stores it in the `$Global:ConnectedSessions` variable.
+
+    ```powershell
+    # View active connections
+    $ConnectedSessions
+    ```
+
+    <Tip>
+      You can connect to multiple appliances simultaneously. Each connection is tracked by hostname in `$ConnectedSessions`. Use the `-ApplianceConnection` parameter on subsequent cmdlets to target a specific appliance.
+    </Tip>
+  </Step>
+
+  <Step title="Retrieve server hardware">
+    List all server hardware managed by the appliance:
+
+    ```powershell
+    Get-OVServer
+    ```
+
+    To filter by name or retrieve a specific server:
+
+    ```powershell
+    # Get a server by name (supports wildcards)
+    Get-OVServer -Name "Encl1, bay 1"
+
+    # List all powered-off servers
+    Get-OVServer | Where-Object { $_.powerState -eq 'Off' }
+    ```
+  </Step>
+
+  <Step title="Retrieve network resources">
+    List Ethernet, Fibre Channel, and FCoE networks:
+
+    ```powershell
+    # Get all networks
+    Get-OVNetwork
+
+    # Get only Ethernet networks
+    Get-OVNetwork -Type Ethernet
+
+    # Get a specific network by name
+    Get-OVNetwork -Name "Production"
+    ```
+
+    <Note>
+      When `Get-OVNetwork` returns multiple network types (Ethernet, FC, FCoE), only the first type may render cleanly in table format due to a known FormatPX limitation. Pipe results to `Format-List` or filter by `-Type` to inspect all properties.
+    </Note>
+  </Step>
+
+  <Step title="Retrieve server profiles">
+    Server profiles define the configuration assigned to physical servers. Retrieve them with:
+
+    ```powershell
+    # List all server profiles
+    Get-OVServerProfile
+
+    # Get a specific profile
+    Get-OVServerProfile -Name "Web-Server-01"
+
+    # List profiles in an unassigned state
+    Get-OVServerProfile | Where-Object { $_.serverHardwareUri -eq $null }
+    ```
+  </Step>
+
+  <Step title="Check appliance version">
+    Confirm the library and appliance API version:
+
+    ```powershell
+    Get-OVVersion
+    ```
+
+    This returns the library version (`10.0.4265.2221`) and the appliance X-API version (`7600`).
+  </Step>
+
+  <Step title="Disconnect from the appliance">
+    Always close your session when you are finished:
+
+    ```powershell
+    # Disconnect from all active sessions
+    Disconnect-OVMgmt
+    ```
+
+    To disconnect from a specific appliance when multiple connections are active:
+
+    ```powershell
+    Disconnect-OVMgmt -Hostname MyAppliance.FQDN.Name
+    ```
+  </Step>
+</Steps>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Installation guide" icon="download" href="/installation">
+    Detailed installation instructions for all platforms, including offline and WSL setups
+  </Card>
+  <Card title="Appliance connections" icon="plug" href="/concepts/appliance-connections">
+    Learn how to manage multiple simultaneous appliance connections
+  </Card>
+  <Card title="Connecting to an appliance" icon="terminal" href="/guides/connecting-to-appliance">
+    Authentication options including credential objects and two-factor auth
+  </Card>
+  <Card title="Cmdlet reference" icon="book" href="/cmdlets/connection/connect-ovmgmt">
+    Browse the complete cmdlet reference for all supported operations
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

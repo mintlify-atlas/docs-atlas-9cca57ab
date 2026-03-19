@@ -1,0 +1,229 @@
+---
+title: "Firmware management"
+description: "Upload SPP firmware baselines, check firmware compliance, install appliance updates, and update server firmware in HPE OneView."
+---
+
+HPE OneView centralizes firmware management through Service Pack for ProLiant (SPP) baselines. A baseline is uploaded once and can then be applied to any managed server.
+
+## Adding firmware baselines
+
+Upload an SPP ISO or component firmware file with `Add-OVBaseline`. The file must be accessible on the machine running the PowerShell session.
+
+<Steps>
+  <Step title="Locate the SPP ISO file">
+    ```powershell
+    $SppFile = Get-ChildItem -Path "\\fileserver\SPP" -Filter "*.iso" | Select-Object -First 1
+    ```
+  </Step>
+  <Step title="Upload the baseline to the appliance">
+    ```powershell
+    $SppFile | Add-OVBaseline
+    ```
+    
+    Or with an explicit path:
+
+    ```powershell
+    Add-OVBaseline -File "C:\SPP\SPP_2024_03.iso"
+    ```
+  </Step>
+  <Step title="Verify the baseline was added">
+    ```powershell
+    Get-OVBaseline
+    ```
+  </Step>
+</Steps>
+
+### Uploading with a component signature file
+
+Some individual components ship with a companion `.compsig` signature file. Pass both files together:
+
+```powershell
+Add-OVBaseline -File "C:\FW\ilo6_1.50.iso" -CompSigFile "C:\FW\ilo6_1.50.compsig"
+```
+
+### Uploading asynchronously
+
+Large ISO files can take several minutes to upload. Use `-Async` and track the task separately:
+
+```powershell
+$Task = Add-OVBaseline -File "C:\SPP\SPP_2024_03.iso" -Async
+
+# Check progress
+$Task | Wait-OVTaskComplete
+```
+
+## Checking firmware compliance
+
+`Show-OVFirmwareReport` compares the installed firmware of a resource against a baseline and reports components that are below (or not equal to) the baseline version.
+
+<CodeGroup>
+
+```powershell Check a single server
+$Server   = Get-OVServer -Name "Encl1, bay 3"
+$Baseline = Get-OVBaseline -FileName "SPP_2024_03.iso" -ErrorAction Stop
+
+$Server | Show-OVFirmwareReport -Baseline $Baseline
+```
+
+```powershell Check all servers
+Get-OVServer | Show-OVFirmwareReport -Baseline (Get-OVBaseline -FileName "SPP_2024_03.iso")
+```
+
+```powershell Check an enclosure
+Get-OVEnclosure -Name "Synergy-Encl-1" | Show-OVFirmwareReport -Baseline $Baseline
+```
+
+```powershell Export report to CSV
+$Baseline = Get-OVBaseline -FileName "SPP_2024_03.iso" -ErrorAction Stop
+
+Get-OVServer | Show-OVFirmwareReport -Baseline $Baseline -Export -Location "C:\Reports"
+```
+
+</CodeGroup>
+
+### Installation policy
+
+By default, `Show-OVFirmwareReport` flags components whose version is **lower** than the baseline. To flag components that don't exactly match the baseline version (including newer components), set `-InstallationPolicy NotEqualToBaseline`:
+
+```powershell
+Get-OVServer | Show-OVFirmwareReport -Baseline $Baseline -InstallationPolicy NotEqualToBaseline
+```
+
+## Installing appliance updates
+
+`Install-OVUpdate` applies an appliance firmware bundle that upgrades the OneView management software itself (not server firmware).
+
+<Warning>
+Appliance updates restart the OneView service and disconnect all active sessions. Plan the update for a maintenance window. The operation cannot be rolled back.
+</Warning>
+
+<Steps>
+  <Step title="Stage the update file">
+    Staging uploads the file but does not immediately apply it, giving you time to review release notes.
+
+    ```powershell
+    Install-OVUpdate -File "C:\Updates\OneView_8.x_Update.bin" -Stage
+    ```
+  </Step>
+  <Step title="Review pending updates">
+    ```powershell
+    Get-OVPendingUpdate
+    ```
+  </Step>
+  <Step title="Apply the staged update">
+    ```powershell
+    Install-OVUpdate -InstallNow
+    ```
+  </Step>
+</Steps>
+
+### Stage and install in one step
+
+```powershell
+# Uploads and immediately applies the update
+Install-OVUpdate -File "C:\Updates\OneView_8.x_Update.bin"
+```
+
+### Viewing pending updates
+
+```powershell
+$Pending = Get-OVPendingUpdate
+
+if ($Pending) {
+
+    Write-Host "Pending update: $($Pending.version) - $($Pending.fileName)"
+
+} else {
+
+    Write-Host "No pending updates."
+
+}
+```
+
+## Updating server firmware
+
+`Update-OVServerFirmware` applies a baseline directly to a server or server profile, without requiring a full profile update operation.
+
+<Steps>
+  <Step title="Get the target server and baseline">
+    ```powershell
+    $Server   = Get-OVServer -Name "Encl1, bay 3" -ErrorAction Stop
+    $Baseline = Get-OVBaseline -FileName "SPP_2024_03.iso" -ErrorAction Stop
+    ```
+  </Step>
+  <Step title="Preview what would change (dry run)">
+    ```powershell
+    Update-OVServerFirmware -InputObject $Server -Baseline $Baseline -PreviewOnly
+    ```
+  </Step>
+  <Step title="Apply the firmware update">
+    ```powershell
+    Update-OVServerFirmware -InputObject $Server -Baseline $Baseline | Wait-OVTaskComplete
+    ```
+  </Step>
+</Steps>
+
+### Firmware installation modes
+
+The `-FirmwareInstallMode` parameter controls how the update is applied:
+
+| Mode | Description |
+|---|---|
+| `FirmwareAndSoftware` | Updates firmware and drivers together (default). Requires OS to be online. |
+| `FirmwareOnly` | Updates iLO and system ROM only. |
+| `FirmwareOffline` | Boots to a maintenance OS to apply firmware offline. |
+| `FirmwareAndOSDrivers` | Updates firmware plus OS-level drivers. |
+| `FirmwareOnlyOfflineMode` | Applies firmware using offline method without booting to maintenance OS. |
+
+```powershell
+# Update iLO and ROM only, using an offline method
+Update-OVServerFirmware `
+    -InputObject $Server `
+    -Baseline $Baseline `
+    -FirmwareInstallMode FirmwareOffline |
+    Wait-OVTaskComplete
+```
+
+### Installation policy
+
+By default, only components **below** the baseline version are updated. To update components that differ in any direction (including downgrading), use `-FirmwareInstallationPolicy NotEqualToBaseline`:
+
+```powershell
+Update-OVServerFirmware `
+    -InputObject $Server `
+    -Baseline $Baseline `
+    -FirmwareInstallationPolicy NotEqualToBaseline |
+    Wait-OVTaskComplete
+```
+
+### Forcing reinstallation
+
+To reinstall firmware even when the component is already at the baseline version:
+
+```powershell
+Update-OVServerFirmware `
+    -InputObject $Server `
+    -Baseline $Baseline `
+    -ReinstallFirmware |
+    Wait-OVTaskComplete
+```
+
+### Updating multiple servers
+
+```powershell
+$Baseline = Get-OVBaseline -FileName "SPP_2024_03.iso" -ErrorAction Stop
+
+# Update all servers in a specific enclosure asynchronously
+Get-OVServer | Where-Object { $_.locationUri -match "Synergy-Encl-1" } | ForEach-Object {
+
+    Update-OVServerFirmware -InputObject $_ -Baseline $Baseline -Async
+
+}
+
+# Wait for all running firmware tasks to complete
+Get-OVTask -State Running | Where-Object name -EQ "Update server firmware" | Wait-OVTaskComplete
+```
+
+<Tip>
+Use `-Async` when updating many servers simultaneously. The appliance handles the queue internally. Poll `Get-OVTask` to monitor progress.
+</Tip>

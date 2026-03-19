@@ -1,0 +1,217 @@
+---
+title: "Set-OVApplianceNetworkConfig"
+description: "Update the network configuration of the HPE OneView appliance."
+---
+
+## Synopsis
+
+Updates the network configuration of the HPE OneView appliance, including hostname, IPv4/IPv6 addressing, DNS servers, and search domains.
+
+## Syntax
+
+**VMA (Virtual Machine Appliance):**
+
+```powershell
+Set-OVApplianceNetworkConfig
+    -Hostname <String>
+    [-IPv4Type <String>]
+    [-IPv4Addr <Net.IPAddress>]
+    [-IPv4Subnet <String>]
+    [-IPv4Gateway <Net.IPAddress>]
+    [-IPv6Type <String>]
+    [-IPv6Addr <Net.IPAddress>]
+    [-IPv6Subnet <String>]
+    [-IPv6Gateway <String>]
+    [-OverrideIPv4DhcpDns]
+    [-OverrideIPv6DhcpDns]
+    [-DomainName <String>]
+    [-SearchDomains <Array>]
+    [-IPv4NameServers <Array>]
+    [-IPv6NameServers <Array>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**Synergy Composer:**
+
+```powershell
+Set-OVApplianceNetworkConfig
+    -Hostname <String>
+    -IPv4Addr <Net.IPAddress>
+    -IPv4Subnet <String>
+    -IPv4Gateway <Net.IPAddress>
+    -ServiceIPv4Node1 <Net.IPAddress>
+    -ServiceIPv4Node2 <Net.IPAddress>
+    [-IPv4Type <String>]
+    [-IPv6Type <String>]
+    [-IPv6Addr <Net.IPAddress>]
+    [-IPv6Subnet <String>]
+    [-IPv6Gateway <String>]
+    [-ServiceIPv6Node1 <Net.IPAddress>]
+    [-ServiceIPv6Node2 <Net.IPAddress>]
+    [-OverrideIPv4DhcpDns]
+    [-OverrideIPv6DhcpDns]
+    [-DomainName <String>]
+    [-SearchDomains <Array>]
+    [-IPv4NameServers <Array>]
+    [-IPv6NameServers <Array>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**Import from file:**
+
+```powershell
+Set-OVApplianceNetworkConfig
+    -importFile <Object>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVApplianceNetworkConfig` modifies the network configuration of the HPE OneView appliance. The cmdlet supports three parameter sets:
+
+- **VMA**: For standard virtual machine appliances. IPv4 addressing can be set to `DHCP` or `STATIC`.
+- **Composer**: For Synergy Composer appliances. Requires explicit static IPv4 settings including service node addresses for both Composer nodes.
+- **importFile**: Accepts a previously exported JSON configuration file.
+
+Only a single appliance connection is supported per invocation. Applying changes may briefly interrupt connectivity to the appliance.
+
+<Warning>
+The `-NtpServers` parameter is deprecated. Use `Set-OVApplianceDateTime` to manage NTP server configuration.
+</Warning>
+
+## Parameters
+
+<ParamField path="Hostname" type="String" required>
+  The fully qualified domain name (FQDN) or hostname to assign to the appliance. Required for VMA and Composer parameter sets.
+</ParamField>
+
+<ParamField path="IPv4Type" type="String">
+  Specifies the IPv4 addressing mode. Valid values: `DHCP`, `STATIC`. Defaults to `STATIC`.
+</ParamField>
+
+<ParamField path="IPv4Addr" type="Net.IPAddress">
+  The static IPv4 address to assign. Required when `-IPv4Type` is `STATIC` for Composer; optional for VMA.
+</ParamField>
+
+<ParamField path="IPv4Subnet" type="String">
+  The IPv4 subnet mask (e.g. `255.255.255.0`) or prefix length (e.g. `24`). Required for Composer when using static addressing.
+</ParamField>
+
+<ParamField path="IPv4Gateway" type="Net.IPAddress">
+  The IPv4 default gateway address. Required for Composer when using static addressing.
+</ParamField>
+
+<ParamField path="IPv6Type" type="String">
+  Specifies the IPv6 addressing mode. Valid values: `DHCP`, `STATIC`, `UNCONFIGURE`. Defaults to `UNCONFIGURE`.
+</ParamField>
+
+<ParamField path="IPv6Addr" type="Net.IPAddress">
+  The static IPv6 address to assign.
+</ParamField>
+
+<ParamField path="IPv6Subnet" type="String">
+  The IPv6 subnet prefix length or mask.
+</ParamField>
+
+<ParamField path="IPv6Gateway" type="String">
+  The IPv6 default gateway address.
+</ParamField>
+
+<ParamField path="ServiceIPv4Node1" type="Net.IPAddress">
+  The service IPv4 address for Composer node 1. Required for Composer parameter set.
+</ParamField>
+
+<ParamField path="ServiceIPv4Node2" type="Net.IPAddress">
+  The service IPv4 address for Composer node 2. Required for Composer parameter set.
+</ParamField>
+
+<ParamField path="ServiceIPv6Node1" type="Net.IPAddress">
+  The service IPv6 address for Composer node 1. Optional for Composer parameter set.
+</ParamField>
+
+<ParamField path="ServiceIPv6Node2" type="Net.IPAddress">
+  The service IPv6 address for Composer node 2. Optional for Composer parameter set.
+</ParamField>
+
+<ParamField path="OverrideIPv4DhcpDns" type="Switch">
+  When specified with DHCP IPv4 type, allows manually provided DNS servers to override those received via DHCP. Alias: `overrideDhcpDns`.
+</ParamField>
+
+<ParamField path="OverrideIPv6DhcpDns" type="Switch">
+  When specified with DHCP IPv6 type, allows manually provided DNS servers to override those received via DHCP.
+</ParamField>
+
+<ParamField path="DomainName" type="String">
+  The DNS domain name for the appliance (e.g. `domain.local`).
+</ParamField>
+
+<ParamField path="SearchDomains" type="Array">
+  An array of DNS search domains.
+</ParamField>
+
+<ParamField path="IPv4NameServers" type="Array">
+  An array of IPv4 DNS name server addresses. Alias: `nameServers`.
+</ParamField>
+
+<ParamField path="IPv6NameServers" type="Array">
+  An array of IPv6 DNS name server addresses.
+</ParamField>
+
+<ParamField path="importFile" type="Object">
+  Path to a JSON network configuration file previously exported with `Get-OVApplianceNetworkConfig -Location`. Alias: `i`, `import`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The HPE OneView appliance connection to configure. Only a single connection is supported. Defaults to the default connection from `${Global:ConnectedSessions}`.
+</ParamField>
+
+## Examples
+
+**Example 1: Set a static IPv4 configuration on a VMA appliance**
+
+```powershell
+Set-OVApplianceNetworkConfig \
+    -Hostname 'oneview.domain.local' \
+    -IPv4Type STATIC \
+    -IPv4Addr '192.168.1.10' \
+    -IPv4Subnet '255.255.255.0' \
+    -IPv4Gateway '192.168.1.1' \
+    -DomainName 'domain.local' \
+    -IPv4NameServers @('192.168.1.53', '192.168.1.54')
+```
+
+Configures the appliance with a static IPv4 address, gateway, and DNS name servers.
+
+**Example 2: Configure a Synergy Composer with static IP**
+
+```powershell
+Set-OVApplianceNetworkConfig \
+    -Hostname 'composer.domain.local' \
+    -IPv4Type STATIC \
+    -IPv4Addr '10.0.0.20' \
+    -IPv4Subnet '255.255.255.0' \
+    -IPv4Gateway '10.0.0.1' \
+    -ServiceIPv4Node1 '10.0.0.21' \
+    -ServiceIPv4Node2 '10.0.0.22' \
+    -DomainName 'domain.local' \
+    -IPv4NameServers @('10.0.0.53')
+```
+
+Sets network configuration for a Synergy Composer including per-node service IP addresses.
+
+**Example 3: Import configuration from a previously exported file**
+
+```powershell
+Set-OVApplianceNetworkConfig -importFile 'C:\Backup\myappliance_ApplianceNetConf.json'
+```
+
+Restores the appliance network configuration from an exported JSON file.
+
+## Output
+
+`HPEOneview.Appliance.ApplianceServerConfiguration`
+
+Returns the updated appliance network configuration object after the change is applied.

@@ -1,0 +1,99 @@
+---
+title: "Get-OVServerHardwareType"
+description: "Retrieve server hardware type resources that describe physical server capabilities for use in server profile templates."
+---
+
+## Synopsis
+
+Retrieves server hardware type resources from an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVServerHardwareType
+    [-Name <String>]
+    [-Model <String>]
+    [-ApplianceConnection <Object>]
+    [-exportFile <String>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVServerHardwareType` retrieves server hardware type (SHT) objects from the HPE OneView appliance. A server hardware type describes the physical capabilities of a server model: the number of CPU sockets, memory slots, available NIC and storage adapters, supported boot options, and firmware update capabilities.
+
+Server hardware types are automatically created when HPE OneView discovers or imports a server. They are referenced by server profile templates to ensure compatibility — a template created for a `SY 480 Gen10 1` hardware type can only be applied to servers of that exact type.
+
+When called without parameters, all server hardware types visible on the appliance are returned, sorted by name.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  Filter by the hardware type name. Supports wildcard patterns.
+</ParamField>
+
+<ParamField path="Model" type="String">
+  Filter by the server model string (e.g., `"ProLiant DL380 Gen10"`).
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+<ParamField path="exportFile" type="String">
+  Path to a JSON file where the results will be exported. The directory must exist. The `x` and `export` aliases are also accepted.
+</ParamField>
+
+## Examples
+
+### List all server hardware types
+
+```powershell
+Get-OVServerHardwareType
+```
+
+Returns all server hardware types registered on the appliance, sorted by name.
+
+### Get a specific hardware type by name
+
+```powershell
+Get-OVServerHardwareType -Name "SY 480 Gen10 1"
+```
+
+Returns the hardware type named exactly `SY 480 Gen10 1`.
+
+### Filter by model string
+
+```powershell
+Get-OVServerHardwareType -Model "ProLiant DL380 Gen10"
+```
+
+Returns all hardware types that match the `ProLiant DL380 Gen10` model.
+
+### Use a hardware type to filter servers
+
+```powershell
+$sht = Get-OVServerHardwareType -Name "SY 480 Gen10 1"
+Get-OVServer -InputObject $sht
+```
+
+Retrieves all server hardware resources of the `SY 480 Gen10 1` type.
+
+### Export hardware types to a file
+
+```powershell
+Get-OVServerHardwareType -exportFile ".\server-hardware-types.json"
+```
+
+Exports all hardware type definitions to a JSON file for offline review.
+
+## Output
+
+`HPEOneView.ServerHardwareType`
+
+Each returned object includes properties such as `name`, `model`, `family`, `formFactor`, `adapters`, `biosSettings`, and `ApplianceConnection`.
+
+## Related cmdlets
+
+- [Get-OVServer](/cmdlets/server/get-ovserver)
+- [Add-OVServer](/cmdlets/server/add-ovserver)

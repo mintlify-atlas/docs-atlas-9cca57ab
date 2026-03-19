@@ -1,0 +1,125 @@
+---
+title: "Add-OVBaseline"
+description: "Upload a firmware baseline ISO or hotfix package to the appliance firmware repository."
+---
+
+## Synopsis
+
+Uploads an HPE Service Pack for ProLiant (SPP) ISO file or individual hotfix package to the appliance firmware repository.
+
+## Syntax
+
+```powershell
+Add-OVBaseline
+    -File <Object>
+    [-CompSigFile <Object>]
+    [-Scope <HPEOneView.Appliance.ScopeCollection>]
+    [-UseInvokeWebRequest]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Add-OVBaseline` uploads a firmware baseline file to the appliance's internal firmware repository. The file can be a full HPE Service Pack for ProLiant (SPP) ISO, or an individual hotfix package (`.exe`, `.scexe`, `.rpm`, `.zip`, or `.fwpkg`).
+
+The cmdlet checks whether an identical baseline already exists on the appliance before starting the upload to avoid duplicates. Large SPP ISO files can take considerable time to transfer; use the `-Async` switch to return the task object immediately and monitor progress separately with `Wait-OVTaskComplete` or `Get-OVTask`.
+
+An optional companion signature file (`-CompSigFile`) can be uploaded alongside the baseline to enable signature verification.
+
+When multiple appliances are connected, use `-ApplianceConnection` to target a specific appliance.
+
+## Parameters
+
+<ParamField path="File" type="Object" required>
+  Path to the SPP ISO or hotfix package file to upload. Accepts a `String` path or a `System.IO.FileInfo` object. The file must exist and have a non-zero size.
+
+  Aliases: `sppFile`
+</ParamField>
+
+<ParamField path="CompSigFile" type="Object">
+  Path to the companion digital signature file for the baseline. Provide this when your security policy requires signature verification of uploaded firmware bundles.
+</ParamField>
+
+<ParamField path="Scope" type="HPEOneView.Appliance.ScopeCollection">
+  One or more scope objects (from `Get-OVScope`) to assign to the baseline at upload time. When omitted, the baseline is added without an explicit scope assignment.
+</ParamField>
+
+<ParamField path="UseInvokeWebRequest" type="SwitchParameter">
+  Use PowerShell's `Invoke-WebRequest` for the file transfer instead of the built-in upload mechanism. Progress display is suppressed when this switch is used. Useful in environments where the default upload method experiences connectivity issues.
+</ParamField>
+
+<ParamField path="Async" type="SwitchParameter">
+  Return the background task object immediately without waiting for the upload to complete. Use `Wait-OVTaskComplete` to block until the task finishes.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specify one or more appliance connection objects or hostnames. Defaults to all connected appliances (`$Global:ConnectedSessions`).
+
+  Aliases: `Appliance`
+</ParamField>
+
+## Examples
+
+### Upload a baseline and wait for completion
+
+```powershell
+Add-OVBaseline -File "C:\firmware\SPP2023.11.01.iso"
+```
+
+Uploads the SPP ISO and blocks until the upload task completes.
+
+### Upload asynchronously and monitor the task
+
+```powershell
+$task = Add-OVBaseline -File "C:\firmware\SPP2023.11.01.iso" -Async
+$task | Wait-OVTaskComplete
+```
+
+Returns the task immediately, then waits for the upload to finish before continuing.
+
+### Upload a hotfix package
+
+```powershell
+Add-OVBaseline -File "C:\firmware\cp049375.exe"
+```
+
+Uploads an individual firmware component hotfix to the repository.
+
+### Upload with a scope assignment
+
+```powershell
+$scope = Get-OVScope -Name "ProductionScope"
+Add-OVBaseline -File "C:\firmware\SPP2023.11.01.iso" -Scope $scope -Async | Wait-OVTaskComplete
+```
+
+Uploads the baseline and assigns it to the `ProductionScope` scope, then waits for the upload to complete.
+
+### Upload to a specific appliance
+
+```powershell
+$task = Add-OVBaseline -File "C:\firmware\SPP2023.11.01.iso" -ApplianceConnection hpov.example.com -Async
+$task | Wait-OVTaskComplete
+```
+
+Targets a specific appliance when multiple connections are active.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+When `-Async` is specified, the cmdlet returns a task resource object. When `-Async` is omitted, the cmdlet blocks and returns after the task completes.
+
+After the task completes, retrieve the uploaded baseline with:
+
+```powershell
+Get-OVBaseline -SppName "HPE Service Pack for ProLiant"
+```
+
+## Related cmdlets
+
+- [Get-OVBaseline](/cmdlets/firmware/get-ovbaseline)
+- [Remove-OVBaseline](/cmdlets/firmware/remove-ovbaseline)
+- [Get-OVTask](/cmdlets/alerts/get-ovtask)
+- [Wait-OVTaskComplete](/cmdlets/alerts/wait-ovtaskcomplete)

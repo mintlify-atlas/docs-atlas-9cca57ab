@@ -1,0 +1,146 @@
+---
+title: "Get-OVServer"
+description: "Retrieve server hardware resources managed or monitored by an HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves one or more server hardware resources from an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVServer
+    [-Name <String>]
+    [-SerialNumber <String>]
+    [-ServerName <String>]
+    [-Status <String[]>]
+    [-NoProfile]
+    [-InputObject <Object>]
+    [-MaintenanceMode <Bool>]
+    [-Label <String>]
+    [-Count <Int>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVServer` returns server hardware objects from the connected HPE OneView appliance. You can filter results by server name, serial number, OS hostname reported by the iLO, health status, label, profile assignment, or hardware type. When called without parameters, all server hardware resources visible within the caller's active scopes are returned.
+
+The cmdlet accepts server hardware type objects or server profile template objects via the pipeline to return only servers that match that hardware type or template.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  Filter servers by the name assigned in HPE OneView. Supports wildcard patterns (e.g., `"Encl1*"`).
+</ParamField>
+
+<ParamField path="SerialNumber" type="String">
+  Filter servers by physical serial number.
+</ParamField>
+
+<ParamField path="ServerName" type="String">
+  Filter servers by the OS hostname or server name as reported by the iLO.
+</ParamField>
+
+<ParamField path="Status" type="String[]">
+  Filter servers by health status. Valid values: `Critical`, `Warning`, `OK`, `Unknown`, `Disabled`. Accepts multiple values.
+</ParamField>
+
+<ParamField path="NoProfile" type="Switch">
+  Return only servers that do not have a server profile assigned.
+</ParamField>
+
+<ParamField path="InputObject" type="Object">
+  A server hardware type or server profile template object (accepted from the pipeline via the `ServerHardwareType` or `ServerProfileTemplate` aliases). Returns only servers matching that type or template.
+</ParamField>
+
+<ParamField path="MaintenanceMode" type="Bool">
+  Filter servers by maintenance mode state. Use `$true` to return only servers currently in maintenance mode.
+</ParamField>
+
+<ParamField path="Label" type="String">
+  Filter servers by an assigned resource label.
+</ParamField>
+
+<ParamField path="Count" type="Int">
+  Limit the number of results returned.
+</ParamField>
+
+<ParamField path="Scope" type="Object">
+  Limit results to resources in the specified scope. Defaults to `AllResourcesInScope`, which respects the active session permissions.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session (`${Global:ConnectedSessions}`).
+</ParamField>
+
+## Examples
+
+### Get all server hardware
+
+```powershell
+Get-OVServer
+```
+
+Returns all server hardware resources visible within the current session's active scopes.
+
+### Get a server by name
+
+```powershell
+Get-OVServer -Name "Encl1, bay 1"
+```
+
+Returns the server hardware resource with the exact name `Encl1, bay 1`.
+
+### Filter by name using a wildcard
+
+```powershell
+Get-OVServer -Name "Encl1*"
+```
+
+Returns all servers whose names begin with `Encl1`.
+
+### Get unassigned servers only
+
+```powershell
+Get-OVServer -NoProfile
+```
+
+Returns only servers that do not currently have a server profile assigned. Useful when selecting targets for new profile deployments.
+
+### Filter by health status
+
+```powershell
+Get-OVServer -Status Critical, Warning
+```
+
+Returns all servers that are in a `Critical` or `Warning` health state.
+
+### Get servers matching a hardware type
+
+```powershell
+$sht = Get-OVServerHardwareType -Name "SY 480 Gen10 1"
+Get-OVServer -InputObject $sht
+```
+
+Returns all servers of the `SY 480 Gen10 1` hardware type.
+
+## Output
+
+`HPEOneView.ServerHardware`
+
+Each returned object includes properties such as `name`, `serialNumber`, `serverName`, `powerState`, `status`, `model`, `processorType`, `memoryMb`, `serverProfileUri`, and `ApplianceConnection`.
+
+## Related cmdlets
+
+- [Add-OVServer](/cmdlets/server/add-ovserver)
+- [Remove-OVServer](/cmdlets/server/remove-ovserver)
+- [Start-OVServer](/cmdlets/server/start-ovserver)
+- [Stop-OVServer](/cmdlets/server/stop-ovserver)
+- [Restart-OVServer](/cmdlets/server/restart-ovserver)
+- [Update-OVServer](/cmdlets/server/update-ovserver)
+- [Get-OVServerHardwareType](/cmdlets/server/get-ovserverhardwaretype)
+- [Get-OVIloSso](/cmdlets/server/get-ovilosso)

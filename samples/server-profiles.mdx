@@ -1,0 +1,295 @@
+---
+title: Server Profile Samples
+description: Create Server Profile Templates and deploy Server Profiles for HPE Synergy blade servers and ProLiant rack servers using the POSH-HPEOneView library.
+---
+
+Three sample scripts demonstrate server profile automation:
+
+| Script | Target hardware | Key features |
+|---|---|---|
+| `Server_Profile_Template_Multiconnection_Sample.ps1` | HPE Synergy 480 Gen10 | UEFI boot, 6 connections (2 mgmt NIC + 2 VM NIC + 2 FC HBA), local RAID1, firmware |
+| `Server_Profile_Template_Rack_Server_Sample.ps1` | DL380 Gen10 Plus | BIOS boot, dual logical disks (RAID1 SSD boot + RAID6 SAS data), firmware |
+| `Server_Multiconnection_Sample.ps1` | Any managed server | Direct profile creation with 8 connections, advanced BIOS/boot tuning |
+
+## Template-based workflow (Synergy 480 Gen10)
+
+The `Server_Profile_Template_Multiconnection_Sample.ps1` script follows a template-first approach: define the template once, then deploy many identical profiles from it.
+
+### Connect and survey available hardware
+
+```powershell
+$MyConnection = Connect-OVMgmt -Hostname 192.168.19.90 `
+    -Credential (Get-Credential -Username Administrator -Message Password)
+
+# Show connected sessions
+$ConnectedSessions
+
+# List all enclosures and servers
+Get-OVEnclosure
+Get-OVServer
+
+# Filter to a specific hardware type
+$SY480Gen10SHT = Get-OVServerHardwareType -name "SY 480 Gen10 1" -ErrorAction Stop
+Get-OVServer -ServerHardwareType $SY480Gen10SHT -NoProfile
+```
+
+### Build the connection list
+
+Each logical connection is created as an object, then passed together to the template. Connection IDs must be unique and map to physical FlexNIC or FlexHBA ports.
+
+```powershell
+# Management NICs (connections 1 & 2) — connection 1 is the PXE boot NIC
+$con1 = Get-OVNetwork -Name "Management Network (VLAN1)" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 1 `
+        -Name 'Management Network (VLAN1) Connection 1' `
+        -Bootable -Priority Primary
+$con2 = Get-OVNetwork -Name "Management Network (VLAN1)" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 2 `
+        -Name 'Management Network (VLAN1) Connection 2'
+
+# VM traffic via a Network Set (connections 3 & 4)
+$con3 = Get-OVNetworkSet -Name 'Prod NetSet' -ErrorAction Stop |
+    New-OVProfileConnection -ConnectionId 3 -Name 'VM Traffic Connection 3'
+$con4 = Get-OVNetworkSet -Name 'Prod NetSet' -ErrorAction Stop |
+    New-OVProfileConnection -ConnectionId 4 -Name 'VM Traffic Connection 4'
+
+# FC HBAs to dual fabrics (connections 5 & 6)
+$con5 = Get-OVNetwork -Name "Prod Fabric A" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 5 -Name 'Prod Fabric A Connection 5'
+$con6 = Get-OVNetwork -Name "Prod Fabric B" -ErrorAction Stop |
+    New-OVServerProfileConnection -ConnectionID 6 -Name 'Prod Fabric B Connection 6'
+```
+
+### Configure local storage
+
+```powershell
+# Single RAID-1 logical disk on the embedded controller
+$LogicalDisk1      = New-OVServerProfileLogicalDisk -Name 'Disk 1' -RAID RAID1
+$StorageController = New-OVServerProfileLogicalDiskController `
+    -ControllerID Embedded -Mode RAID -Initialize -LogicalDisk $LogicalDisk1
+```
+
+### Create the Server Profile Template
+
+```powershell
+$params = @{
+    Name               = "Hypervisor Cluster Node Template v1"
+    Description        = "Corp standard hypervisor cluster node, version 1.0"
+    ServerHardwareType = $SY480Gen10SHT
+    EnclosureGroup     = Get-OVEnclosureGroup -Name "DCS Synergy Default EG"
+    Connections        = $con1, $con2, $con3, $con4, $con5, $con6
+    Firmware           = $true
+    Baseline           = Get-OVBaseline -FileName 'SPP_2017_10_20171215_for_HPE_Synergy_Z7550-96455.iso' -ErrorAction Stop
+    FirmwareMode       = 'FirmwareAndSoftware'
+    BootMode           = "UEFIOptimized"
+    PxeBootPolicy      = "IPv4"
+    ManageBoot         = $True
+    BootOrder          = "HardDisk"
+    LocalStorage       = $True
+    StorageController  = $StorageController
+    HideUnusedFlexnics = $True
+}
+
+New-OVServerProfileTemplate @params | Wait-OVTaskComplete
+```
+
+### Deploy Server Profiles from the template
+
+The script queries hardware inventory to find servers that meet a minimum specification, then creates one profile per server asynchronously.
+
+```powershell
+$spt = Get-OVServerProfileTemplate -Name "Hypervisor Cluster Node Template v1" -ErrorAction Stop
+
+# Find 4 SY480 Gen10 servers with at least 4 CPU cores and 512 GB RAM
+Get-OVServer -ServerHardwareType $SY480Gen10SHT -NoProfile -ErrorAction Stop |
+    Where-Object { ($_.processorCount * $_.processorCoreCount) -ge 4 -and
+                   $_.memoryMb -ge (512 * 1024) } |
+    Select-Object -First 4 -OutVariable svr
+
+# Power off before deploying
+$svr | Stop-OVServer -Confirm:$false
+
+# Submit all profile creation tasks in parallel
+1..($svr.Count) | ForEach-Object {
+    New-OVServerProfile -Name "Hyp-Clus-0$_" -Assignment Server `
+        -Server $svr[($_ - 1)] -ServerProfileTemplate $spt -Async
+}
+
+# Wait for all running tasks
+Get-OVTask -State Running | Wait-OVTaskComplete
+```
+
+---
+
+## Template-based workflow (DL380 Gen10 Plus rack server)
+
+The rack server sample follows the same pattern but targets a DL380 Gen10 Plus with BIOS boot mode and a more elaborate storage layout.
+
+### Storage layout
+
+```powershell
+# RAID-1 boot volume from SATA SSD drives, marked bootable
+$LogicalDisk1 = New-OVServerProfileLogicalDisk -Name 'Boot' -RAID RAID1 `
+    -DriveType SATASSD -Bootable $true
+
+# RAID-6 data volume from 8 SAS drives
+$LogicalDisk2 = New-OVServerProfileLogicalDisk -Name 'Data1' -RAID RAID6 `
+    -DriveType SAS -NumberofDrives 8
+
+$StorageController = New-OVServerProfileLogicalDiskController `
+    -ControllerID Embedded -Mode RAID -Initialize `
+    -LogicalDisk $LogicalDisk1, $LogicalDisk2
+```
+
+### Template parameters
+
+```powershell
+$params = @{
+    Name               = "Production Node Template v1"
+    Description        = "Enterprise production node, version 1.0"
+    ServerHardwareType = Get-OVServerHardwareType -name "DL380 Gen10 Plus" -ErrorAction Stop
+    Firmware           = $true
+    Baseline           = Get-OVBaseline -FileName 'P45316_001_gen10spp-2021_10_0-SPP2021100_2021_1012_13.iso' -ErrorAction Stop
+    FirmwareMode       = 'FirmwareAndSoftware'
+    BootMode           = "BIOS"       # DL380 Gen10 Plus defaults to BIOS
+    ManageBoot         = $True
+    BootOrder          = "HardDisk"
+    LocalStorage       = $True
+    StorageController  = $StorageController
+}
+
+New-OVServerProfileTemplate @params | Wait-OVTaskComplete
+```
+
+### Deploy profiles
+
+```powershell
+$spt = Get-OVServerProfileTemplate -Name "Production Node Template v1" -ErrorAction Stop
+
+# Find servers compatible with the template with at least 32 CPU cores and 512 GB RAM
+Get-OVServer -InputObject $spt -NoProfile |
+    Where-Object { ($_.processorCount * $_.processorCoreCount) -ge 32 -and
+                   $_.memoryMb -ge (512 * 1024) } |
+    Select-Object -First 4 -OutVariable svr
+
+$svr | Where-Object powerState -ne "Off" | Stop-OVServer -Confirm:$false
+
+1..($svr.Count) | ForEach-Object {
+    New-OVServerProfile -Name ("Node {0:000}" -f $_) -Assignment Server `
+        -Server $svr[($_ - 1)] -ServerProfileTemplate $spt -Async
+}
+
+Get-OVTask -State Running | Wait-OVTaskComplete
+```
+
+---
+
+## Direct profile creation with multi-connections
+
+`Server_Multiconnection_Sample.ps1` creates a profile directly on a server (no template) and demonstrates post-creation modifications.
+
+### Define connections and create the profile
+
+```powershell
+$server = Get-OVServer -NoProfile | Select-Object -First 1
+$profileName = "Profile-" + $server.serialNumber
+
+# Ethernet connections
+$netRed  = Get-OVNetwork "red"
+$conRed1 = New-OVProfileConnection -id 1 -type Ethernet -requestedBW 1000 -network $netRed
+$conRed2 = New-OVProfileConnection -id 2 -type Ethernet -requestedBW 1000 -network $netRed
+
+# Fibre Channel connections
+$conFC1 = New-OVProfileConnection -id 3 -type FibreChannel -requestedBW 4000 `
+    -network (Get-OVNetwork "Production Fabric A")
+$conFC2 = New-OVProfileConnection -id 4 -type FibreChannel -requestedBW 4000 `
+    -network (Get-OVNetwork "Production Fabric B")
+
+# Additional Ethernet connections
+$netBlack  = Get-OVNetwork "black"
+$conBlack1 = New-OVProfileConnection -id 5 -type Ethernet -requestedBW 2000 -network $netBlack
+$conBlack2 = New-OVProfileConnection -id 6 -type Ethernet -requestedBW 2000 -network $netBlack
+
+# Network Set connections
+$netSetProd = Get-OVNetworkSet "Production Networks"
+$conSet1 = New-OVProfileConnection -id 7 -type Ethernet -requestedBW 3000 -network $netSetProd
+$conSet2 = New-OVProfileConnection -id 8 -type Ethernet -requestedBW 3000 -network $netSetProd
+
+$conList = @($conRed1,$conRed2,$conBlack1,$conBlack2,$conSet1,$conSet2,$conFC1,$conFC2)
+$task = New-OVProfile -name $profileName -server $server -connections $conList -Async
+$task = $task | Wait-OVTaskComplete
+```
+
+### Modify connections after creation
+
+Connection updates require the server to be powered off.
+
+```powershell
+$profile = Send-OVRequest $task.associatedResource.resourceUri
+
+# Reassign connections 5 and 6 from "black" to "green"
+$netGreen  = Get-OVNetwork "green"
+$conGreen1 = New-OVProfileConnection -connectionId 5 -type Ethernet -network $netGreen
+$conGreen2 = New-OVProfileConnection -connectionId 6 -type Ethernet -network $netGreen
+$profile.connections = $profile.connections + $conGreen1 + $conGreen2
+$task = Set-OVResource $profile
+$task = Wait-OVTaskComplete -taskUri $task.uri
+```
+
+### Configure boot order and BIOS settings
+
+```powershell
+$profile = Send-OVRequest $task.associatedResource.resourceUri
+
+# Set boot order
+$profile.boot.order       = @("PXE","HardDisk","USB","CD","Floppy","FibreChannelHba")
+$profile.boot.manageBoot  = $true
+
+# Disable external USB ports via BIOS override
+$serverType = Send-OVRequest $profile.serverHardwareTypeUri
+foreach ($setting in $serverType.biosSettings)
+{
+    if ($setting.name.Contains("USB Control"))
+    {
+        foreach ($option in $setting.options)
+        {
+            if ($option.name.Contains("External"))
+            {
+                $profile.bios.manageBios           = $true
+                $profile.bios.overriddenSettings   = @(@{id=$setting.id; value=$option.id})
+                break
+            }
+        }
+        break
+    }
+}
+
+$task = Set-OVResource $profile
+$task = Wait-OVTaskComplete -Task $task -timeout (New-TimeSpan -Minutes 20)
+```
+
+### Assign a firmware baseline
+
+```powershell
+Get-OVBaseline   # List available baselines
+
+$fw = Get-OVBaseline -FileName 'SPP2022.iso'
+if ($serverType.firmwareUpdateSupported)
+{
+    $profile.firmwareSettings.manageFirmware     = $true
+    $profile.firmwareSettings.firmwareBaselineUri = $fw.uri
+    $task = Set-OVResource $profile
+    $task = Wait-OVTaskComplete -Task $task -timeout (New-TimeSpan -Minutes 30)
+}
+```
+
+## Key concepts
+
+| Concept | Notes |
+|---|---|
+| Connection ID | Logical index (1–based) mapping to a physical FlexNIC/FlexHBA port. IDs must be unique within a profile. |
+| `-Bootable -Priority Primary` | Marks a connection as the primary PXE boot path for UEFI boot mode. |
+| `HideUnusedFlexnics` | Hides FlexNIC ports not used by the profile from the OS device list. Recommended for Synergy. |
+| `FirmwareAndSoftware` mode | Updates both firmware and system software (drivers/agents) during profile application. |
+| `-NoProfile` filter | `Get-OVServer -NoProfile` returns only servers that do not have an assigned profile. |
+| `-Async` flag | Submits the task without waiting. Use `Wait-OVTaskComplete` or `Get-OVTask` to monitor. |

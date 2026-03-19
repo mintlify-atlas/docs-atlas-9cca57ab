@@ -1,0 +1,221 @@
+---
+title: "Storage management"
+description: "Add HPE storage systems (3PAR, Primera, Alletra), manage storage pools and volumes, use volume templates, and attach volumes to server profiles."
+---
+
+HPE OneView integrates with HPE block storage arrays to provide centralized storage lifecycle management. The workflow is: add the array, then add storage pools, then provision volumes from those pools.
+
+## Supported storage families
+
+`Add-OVStorageSystem` supports the following `-Family` values:
+
+| Value | Array family |
+|---|---|
+| `StoreServ` | HPE 3PAR StoreServ (default) |
+| `Primera` | HPE Primera |
+| `Alletra9000` | HPE Alletra 9000 |
+| `Alletra6000` | HPE Alletra 6000 |
+| `Alletra5000` | HPE Alletra 5000 |
+| `Nimble` | HPE Nimble Storage |
+
+## Adding a storage system
+
+<Steps>
+  <Step title="Gather the storage system credentials">
+    ```powershell
+    $StorageCreds = Get-Credential -Username 3paradm -Message "3PAR/Primera admin password"
+    ```
+  </Step>
+  <Step title="Build the parameter hashtable with port-to-fabric mappings">
+    The `-Ports` hashtable maps physical host ports on the array to the FC networks in OneView. The `-PortGroups` hashtable groups ports together for load balancing.
+
+    ```powershell
+    $params = @{
+        Hostname   = "HPEStoreServ_1-array.contoso.com"
+        Credential = $StorageCreds
+        Domain     = "NODOMAIN"
+        Ports = @{
+            "0:1:1" = "3PAR SAN DA A"
+            "0:1:2" = "3PAR SAN Fabric A"
+            "1:1:1" = "3PAR SAN Fabric B"
+            "1:1:2" = "3PAR SAN DA B"
+        }
+        PortGroups = @{
+            "0:1:1" = "PG_1"
+            "0:1:2" = "PG_2"
+            "1:1:1" = "PG_1"
+            "1:1:2" = "PG_2"
+        }
+    }
+    ```
+  </Step>
+  <Step title="Add the storage system and wait for the task to complete">
+    ```powershell
+    Add-OVStorageSystem @params | Wait-OVTaskComplete
+    ```
+  </Step>
+</Steps>
+
+### Adding a system with a virtual domain
+
+For arrays configured with virtual domains (common in multi-tenant environments), specify the domain name. The value is case-sensitive.
+
+```powershell
+$params = @{
+    Hostname   = "HP3Par_2-array.contoso.com"
+    Username   = "3paradm"
+    Password   = "3pardata"
+    Domain     = "VirtualDomain1"   # Case-sensitive
+    Ports      = @{
+        "1:1:1" = "Fabric A"
+        "2:1:1" = "FabricA"
+        "1:1:2" = "Fabric B"
+        "2:1:2" = "Fabric B"
+    }
+    PortGroups = @{
+        "0:1:1" = "PG_1"
+        "0:1:2" = "PG_2"
+        "1:1:1" = "PG_1"
+        "1:1:2" = "PG_2"
+    }
+}
+
+Add-OVStorageSystem @params | Wait-OVTaskComplete
+```
+
+## Adding storage pools
+
+After the array is registered, add storage pools (CPGs on 3PAR/Primera/Alletra) to make them available for volume provisioning.
+
+<CodeGroup>
+
+```powershell Via the storage system object (pipeline)
+$StorageSystem = Get-OVStorageSystem -Name "HP3Par_1"
+
+$StorageSystem | New-OVStoragePool -PoolName "FST_CPG1"
+$StorageSystem | New-OVStoragePool -PoolName "FST_CPG2"
+```
+
+```powershell Multiple pools at once
+$myPools = @("FST_CPG3", "FST_CPG4")
+Get-OVStorageSystem -Name "HP3Par_2" | New-OVStoragePool -PoolName $myPools
+```
+
+```powershell Using Add-OVStoragePool directly
+Add-OVStoragePool -StorageSystem "HP3Par_1" -PoolName "R1_FC_CPG" | Wait-OVTaskComplete
+```
+
+</CodeGroup>
+
+<Note>
+Storage pools are imported, not created. The CPG must already exist on the array. OneView discovers and manages it.
+</Note>
+
+## Creating storage volumes
+
+Volumes are provisioned from a storage pool. Capacity is specified in gigabytes.
+
+### Private (non-shared) volumes
+
+```powershell
+$Pool = Get-OVStoragePool -Name "FST_CPG1"
+
+# Create 10 private volumes named Vol1 through Vol10
+1..10 | ForEach-Object {
+    New-OVStorageVolume -Name "Vol$_" -StoragePool $Pool -Capacity 60
+}
+```
+
+### Shared volumes
+
+Shared volumes can be presented to multiple server profiles simultaneously (required for clustered workloads).
+
+```powershell
+# Create 5 shared volumes of 250 GB each
+1..5 | ForEach-Object {
+    New-OVStorageVolume -Name "SharedVol$_" -StoragePool "FST_CPG2" -Capacity 250 -Shared
+}
+```
+
+### Thin-provisioned volume
+
+```powershell
+$Pool = Get-OVStoragePool -Name "FST_CPG1"
+
+New-OVStorageVolume -Name "ThinVol01" -StoragePool $Pool -Capacity 500 -ProvisioningType Thin
+```
+
+## Volume templates
+
+Volume templates define a standard configuration that enforces consistent provisioning across your environment. Administrators create templates; end users provision volumes from them.
+
+```powershell
+$Pool = Get-OVStoragePool -Name "FST_CPG1" -ErrorAction Stop
+
+$Template = New-OVStorageVolumeTemplate `
+    -Name "Standard 100GB Thin" `
+    -Description "Corporate standard 100 GB thin-provisioned volume" `
+    -StoragePool $Pool `
+    -Capacity 100 `
+    -ProvisioningType Thin `
+    -LockProvisionType `
+    -LockCapacity
+```
+
+The `-LockProvisionType` and `-LockCapacity` switches prevent users from overriding those values when they provision from the template.
+
+### Provisioning from a template
+
+```powershell
+$Template = Get-OVStorageVolumeTemplate -Name "Standard 100GB Thin" -ErrorAction Stop
+
+New-OVStorageVolume -Name "AppVol01" -VolumeTemplate $Template
+```
+
+## Attaching volumes to server profiles
+
+Volumes are attached through server profile connections. Create a volume attachment object and include it in the profile's `-StorageVolume` parameter.
+
+```powershell
+$Volume  = Get-OVStorageVolume -Name "Vol1" -ErrorAction Stop
+$Profile = Get-OVServerProfile -Name "WebServer-01" -ErrorAction Stop
+
+# Add the volume attachment to the existing profile
+$VolumeAttachment = New-OVServerProfileAttachVolume -Volume $Volume
+
+Set-OVServerProfile -InputObject $Profile -StorageVolume $VolumeAttachment | Wait-OVTaskComplete
+```
+
+### Including volumes in a new server profile template
+
+When building a server profile template that includes storage, add the attachment during template creation:
+
+```powershell
+$Volume     = Get-OVStorageVolume -Name "SharedVol1" -ErrorAction Stop
+$Attachment = New-OVServerProfileAttachVolume -Volume $Volume -LunIdType Auto
+
+New-OVServerProfileTemplate `
+    -Name "SQL Cluster Node v1" `
+    -ServerHardwareType $SHT `
+    -EnclosureGroup $EG `
+    -StorageVolume $Attachment
+```
+
+## Listing storage resources
+
+```powershell
+# All registered storage systems
+Get-OVStorageSystem
+
+# Storage pools on a specific system
+Get-OVStoragePool -StorageSystem "HP3Par_1"
+
+# All pools
+Get-OVStoragePool
+
+# All volumes
+Get-OVStorageVolume
+
+# A specific volume
+Get-OVStorageVolume -Name "Vol1"
+```

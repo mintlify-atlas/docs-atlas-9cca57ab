@@ -1,0 +1,92 @@
+---
+title: "Get-OVUser"
+description: "Retrieve local user account objects from an HPE OneView appliance."
+---
+
+## Synopsis
+
+Returns one or more local user account objects defined on an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVUser
+    [-Name <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVUser` queries the appliance index for local user accounts and returns the matching objects. Use this cmdlet to inspect account properties, view assigned roles, and feed user objects into `Set-OVUser` or `Remove-OVUser` via the pipeline.
+
+When called by a user who does not have the Infrastructure administrator role, the cmdlet automatically falls back to returning only the calling user's own account record.
+
+Wildcard characters (`*`) are supported in the `Name` parameter.
+
+## Parameters
+
+<ParamField path="Name" type="string">
+  The username to search for. Accepts wildcard characters (`*`). When omitted, all local user accounts are returned. Aliased as `Username`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object" default="Default connected session">
+  The appliance connection object or name. Defaults to the default connected session in `$ConnectedSessions`. Accepts an array of connections to query multiple appliances. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### List all local user accounts
+
+```powershell
+Get-OVUser
+```
+
+Returns every local user account on the default connected appliance.
+
+### Get a specific user by name
+
+```powershell
+Get-OVUser -Name 'jsmith'
+```
+
+Returns the user account with the username `jsmith`.
+
+### Use a wildcard to find accounts matching a pattern
+
+```powershell
+Get-OVUser -Name 'admin*'
+```
+
+Returns all local users whose username begins with `admin`.
+
+### Pipe a user object into Set-OVUser
+
+```powershell
+Get-OVUser -Name 'jsmith' | Set-OVUser -FullName 'Jane Smith'
+```
+
+Retrieves the `jsmith` account and updates the display name.
+
+## Output
+
+`HPEOneview.Appliance.User`
+
+Each returned object includes the following key properties:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `userName` | String | The login username. |
+| `fullName` | String | The display name. |
+| `emailAddress` | String | The contact email address. |
+| `officePhone` | String | The office phone number. |
+| `mobilePhone` | String | The mobile phone number. |
+| `enabled` | Boolean | Whether the account is active. |
+| `permissions` | Array | The role and scope assignments for this user. |
+
+## Related cmdlets
+
+- [New-OVUser](/cmdlets/security/new-ovuser)
+- [Set-OVUser](/cmdlets/security/set-ovuser)
+- [Remove-OVUser](/cmdlets/security/remove-ovuser)
+- [Get-OVRole](/cmdlets/security/get-ovrole)

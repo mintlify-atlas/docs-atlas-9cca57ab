@@ -1,0 +1,168 @@
+---
+title: "Get-OVAlert"
+description: "Retrieve alert resources from one or more HPE OneView appliances, with optional filtering by severity, health category, state, assigned user, and time range."
+---
+
+## Synopsis
+
+Retrieve HPE OneView alerts with support for rich filtering options.
+
+## Syntax
+
+```powershell
+Get-OVAlert
+    [-InputObject <Object>]
+    [-Severity <String>]
+    [-HealthCategory <AlertHealthCategoryEnum>]
+    [-AssignedToUser <String>]
+    [-AlertState <String>]
+    [-Count <Int>]
+    [-TimeSpan <TimeSpan>]
+    [-Start <DateTime>]
+    [-End <DateTime>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVAlert` queries the HPE OneView alert index and returns matching `HPEOneView.Alert` objects. Results are sorted by creation date, most recent first.
+
+Alerts can be filtered by severity (Critical, Warning, OK, etc.), health category (Logical-Interconnect, Server, Storage, etc.), alert state (Active, Cleared, Locked), the user the alert is assigned to, and a creation time range.
+
+You can optionally pipe a supported resource object (server hardware, enclosure, logical enclosure, server profile, interconnect, or logical interconnect) to scope results to that resource.
+
+<Warning>
+Calling `Get-OVAlert` without any filters in a large environment can return thousands of records and take a very long time. Always filter by `-AlertState`, `-Severity`, or another parameter when possible.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object">
+A resource object whose alerts you want to retrieve. Accepted resource categories:
+- `server-hardware`
+- `enclosures`
+- `logical-enclosures`
+- `server-profiles`
+- `interconnects`
+- `logical-interconnects`
+- `spp` (firmware baselines)
+
+Can be provided via the pipeline.
+</ParamField>
+
+<ParamField path="Severity" type="String">
+Filter alerts by severity level. Valid values:
+- `Unknown`
+- `OK`
+- `Disabled`
+- `Warning`
+- `Critical`
+</ParamField>
+
+<ParamField path="HealthCategory" type="AlertHealthCategoryEnum">
+Filter alerts by health category (resource area). Examples include `Logical-Interconnect`, `Server`, `Storage`, `Appliance`, `Network`.
+</ParamField>
+
+<ParamField path="AssignedToUser" type="String">
+Filter alerts that are assigned to the specified username.
+</ParamField>
+
+<ParamField path="AlertState" type="String">
+Filter alerts by their current state. Common values:
+- `Active` — alert is unresolved
+- `Cleared` — alert has been acknowledged
+- `Locked` — alert cannot be cleared by normal means
+
+Alias: `-State`
+</ParamField>
+
+<ParamField path="Count" type="Int">
+Maximum number of alert records to return. Defaults to 0 (all results).
+</ParamField>
+
+<ParamField path="TimeSpan" type="TimeSpan">
+Return only alerts created within the specified time span measured back from now. For example, `[TimeSpan]::FromHours(24)` returns alerts from the last 24 hours.
+
+Mutually exclusive with `-Start` and `-End`.
+</ParamField>
+
+<ParamField path="Start" type="DateTime">
+Return alerts created after this date/time. Use with `-End` to define a date range.
+</ParamField>
+
+<ParamField path="End" type="DateTime">
+Return alerts created before this date/time. Defaults to the current date and time.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Get all active critical alerts
+
+```powershell
+Get-OVAlert -AlertState Active -Severity Critical
+```
+
+### Get active interconnect alerts and assign them to a user
+
+```powershell
+$alerts = Get-OVAlert -HealthCategory Logical-Interconnect -AlertState Active
+
+foreach ($alert in $alerts)
+{
+    Set-OVAlert -InputObject $alert -AssignToUser Sally
+}
+```
+
+### Get alerts for a specific server
+
+```powershell
+$server = Get-OVServer -Name 'Encl1, Bay 1'
+Get-OVAlert -InputObject $server -AlertState Active
+```
+
+### Get alerts from the last 48 hours
+
+```powershell
+Get-OVAlert -AlertState Active -TimeSpan ([TimeSpan]::FromHours(48))
+```
+
+### Get the 10 most recent alerts
+
+```powershell
+Get-OVAlert -Count 10
+```
+
+### Get alerts assigned to a specific user
+
+```powershell
+Get-OVAlert -AssignedToUser Sally -AlertState Active
+```
+
+## Output
+
+`HPEOneView.Alert`
+
+Each object includes properties such as:
+
+| Property | Type | Description |
+|---|---|---|
+| `description` | String | Human-readable description of the alert |
+| `severity` | String | Severity level (Critical, Warning, OK, etc.) |
+| `alertState` | String | Current state (Active, Cleared, Locked) |
+| `healthCategory` | String | Resource area that generated the alert |
+| `assignedToUser` | String | Username the alert is assigned to |
+| `created` | DateTime | When the alert was created |
+| `modified` | DateTime | When the alert was last modified |
+| `resourceUri` | String | URI of the associated resource |
+| `uri` | String | URI of the alert itself |
+
+## Related cmdlets
+
+- [Set-OVAlert](/cmdlets/alerts/set-ovalert)
+- [Remove-OVAlert](/cmdlets/alerts/clear-ovalert)
+- [Get-OVTask](/cmdlets/alerts/get-ovtask)

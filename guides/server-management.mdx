@@ -1,0 +1,218 @@
+---
+title: "Server management"
+description: "Discover, add, and manage server hardware in HPE OneView. Covers monitored vs managed servers, power operations, iLO SSO tokens, and filtering."
+---
+
+HPE OneView manages server hardware through iLO. A server can be added in two modes:
+
+- **Managed** — OneView controls firmware, profiles, and lifecycle. Requires an HPE OneView license.
+- **Monitored** — OneView provides read-only visibility into health and alerts. No license required.
+
+## Discovering server hardware
+
+`Get-OVServer` retrieves server hardware objects. With no parameters it returns everything.
+
+```powershell
+# All servers
+Get-OVServer
+
+# A specific server by iLO hostname or bay location
+Get-OVServer -Name "Encl1, bay 3"
+
+# By serial number
+Get-OVServer -SerialNumber "MXQ12345AB"
+
+# By OS hostname reported by the iLO host data
+Get-OVServer -ServerName "esxi-host-01.example.com"
+
+# Servers without a profile assigned
+Get-OVServer -NoProfile
+
+# Servers with a warning or critical health status
+Get-OVServer -Status Warning, Critical
+```
+
+## Filtering servers by hardware type
+
+Retrieve a hardware type object first, then filter servers against it:
+
+```powershell
+$SY480Gen10SHT = Get-OVServerHardwareType -Name "SY 480 Gen10 1" -ErrorAction Stop
+
+# All servers of that type with no profile
+Get-OVServer -InputObject $SY480Gen10SHT -NoProfile
+
+# Servers with at least 4 CPU cores and 512 GB RAM
+Get-OVServer -InputObject $SY480Gen10SHT -NoProfile |
+    Where-Object { ($_.processorCount * $_.processorCoreCount) -ge 4 -and
+                   $_.memoryMb -ge (512 * 1024) }
+```
+
+## Adding servers
+
+### Adding a managed server
+
+Adding a server as managed consumes an HPE OneView license and allows full lifecycle management.
+
+```powershell
+$Credential = Get-Credential -Username Administrator -Message "iLO password"
+
+Add-OVServer -Hostname "ilo.server01.example.com" -Credential $Credential -LicensingIntent OneView | Wait-OVTaskComplete
+```
+
+### Adding a monitored server
+
+Pass `-Monitored` to add the server in read-only mode without consuming a license.
+
+```powershell
+$Credential = [System.Management.Automation.PSCredential]::new(
+    "Administrator",
+    (ConvertTo-SecureString "ilopassword" -AsPlainText -Force)
+)
+
+Add-OVServer -Hostname "ilo.server01.example.com" -Credential $Credential -Monitored | Wait-OVTaskComplete
+```
+
+### Bulk-adding monitored servers from a CSV
+
+The `AddServers_Monitored_Sample.ps1` sample script demonstrates importing a large fleet from a CSV file. The CSV must contain the columns `hostname`, `account`, and `password`.
+
+```powershell
+# Connect first
+$ApplianceConnection = Connect-OVMgmt -Hostname $Hostname -Credential (Get-Credential -Username Administrator -Message Password)
+
+# Read the CSV
+[Array]$ServersList = Import-Csv $CSV
+
+$AsyncTaskCollection = New-Object System.Collections.ArrayList
+$counter = 1
+
+$ServersList | ForEach-Object {
+
+    # The appliance supports at most 64 concurrent async tasks
+    if ($counter -eq 64) {
+
+        Write-Host "Pausing 120 seconds to let tasks complete."
+        Start-Sleep -Seconds 120
+        $counter = 1
+
+    }
+
+    $Credential = [System.Management.Automation.PSCredential]::new(
+        $_.account,
+        (ConvertTo-SecureString $_.password -AsPlainText -Force)
+    )
+
+    $Resp = Add-OVServer -Hostname $_.hostname -Credential $Credential -Monitored -Async
+    [void]$AsyncTaskCollection.Add($Resp)
+    $counter++
+
+}
+
+# Review task results
+$AsyncTaskCollection | ForEach-Object { Send-OVRequest $_.uri } | Sort-Object status -Descending | Format-Table
+```
+
+<Note>
+The appliance limits concurrent asynchronous tasks to 64. The sample script above pauses processing once that limit is reached. For very large fleets, consider batching into groups and waiting for each batch to complete with `Wait-OVTaskComplete`.
+</Note>
+
+## Server power operations
+
+Power cmdlets accept server hardware objects from the pipeline.
+
+<CodeGroup>
+
+```powershell Start a server
+Get-OVServer -Name "Encl1, bay 3" | Start-OVServer
+```
+
+```powershell Stop a server (graceful)
+Get-OVServer -Name "Encl1, bay 3" | Stop-OVServer
+```
+
+```powershell Force power off
+Get-OVServer -Name "Encl1, bay 3" | Stop-OVServer -Force -Confirm:$false
+```
+
+```powershell Restart a server
+Get-OVServer -Name "Encl1, bay 3" | Restart-OVServer
+```
+
+</CodeGroup>
+
+### Powering off servers before profile assignment
+
+Server profiles can only be assigned to powered-off servers. Pipe the server objects to `Stop-OVServer` before calling `New-OVServerProfile`:
+
+```powershell
+$SY480Gen10SHT = Get-OVServerHardwareType -Name "SY 480 Gen10 1" -ErrorAction Stop
+
+$Servers = Get-OVServer -InputObject $SY480Gen10SHT -NoProfile |
+    Where-Object { ($_.processorCount * $_.processorCoreCount) -ge 4 -and
+                   $_.memoryMb -ge (512 * 1024) } |
+    Select-Object -First 4
+
+# Power off before assigning profiles
+$Servers | Stop-OVServer -Confirm:$false
+```
+
+## Getting iLO SSO tokens
+
+`Get-OVIloSso` retrieves a Single Sign-On token that opens an authenticated iLO web session without requiring separate iLO credentials.
+
+```powershell
+# Open iLO web UI via SSO (returns a URL)
+$Server = Get-OVServer -Name "Encl1, bay 3"
+$SsoToken = Get-OVIloSso -InputObject $Server
+
+# Start-Process to open in browser
+Start-Process $SsoToken.IloSsoUrl
+```
+
+### iLO REST API session
+
+Pass `-IloRestSession` to get an object suitable for direct use with the iLO RESTful API:
+
+```powershell
+$Server     = Get-OVServer -Name "Encl1, bay 3"
+$IloSession = Get-OVIloSso -InputObject $Server -IloRestSession
+
+# Use $IloSession.RootUri and $IloSession.XAuthToken with Invoke-RestMethod
+$Headers = @{ "X-Auth-Token" = $IloSession.XAuthToken }
+Invoke-RestMethod -Uri ("$($IloSession.RootUri)/redfish/v1/Systems/1") -Headers $Headers
+```
+
+## Server hardware types
+
+Hardware types describe the physical capabilities of a server model. They are used as constraints when creating server profile templates.
+
+```powershell
+# List all hardware types
+Get-OVServerHardwareType
+
+# Get a specific type
+$SHT = Get-OVServerHardwareType -Name "BL460c Gen10" -ErrorAction Stop
+
+# See what network adapters and slots the type exposes
+$SHT.adapters
+$SHT.storageCapabilities
+```
+
+<Tip>
+When you add a server to OneView, the appliance auto-discovers the hardware type. You do not need to create hardware types manually.
+</Tip>
+
+## Removing servers
+
+```powershell
+# Remove a specific server (prompts for confirmation)
+Get-OVServer -Name "Encl1, bay 3" | Remove-OVServer
+
+# Remove without prompting
+Get-OVServer -Name "Encl1, bay 3" | Remove-OVServer -Confirm:$false
+```
+
+<Warning>
+Removing a managed server also removes any server profile assigned to it. Unassign the profile first if you need to preserve it.
+</Warning>

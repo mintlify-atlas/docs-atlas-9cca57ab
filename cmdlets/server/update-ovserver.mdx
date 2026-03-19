@@ -1,0 +1,129 @@
+---
+title: "Update-OVServer"
+description: "Refresh the configuration and compliance state of a server hardware resource in HPE OneView."
+---
+
+## Synopsis
+
+Refreshes the state of a server hardware resource managed by HPE OneView.
+
+## Syntax
+
+**Default refresh**
+
+```powershell
+Update-OVServer
+    [-InputObject] <Object>
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**Refresh with updated credentials**
+
+```powershell
+Update-OVServer
+    [-InputObject] <Object>
+    -Credential <PSCredential>
+    [-Hostname <String>]
+    [-Force]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Update-OVServer` triggers an immediate refresh of the server hardware resource in HPE OneView. The appliance re-queries the iLO to update health status, power state, firmware inventory, and configuration compliance data.
+
+Use this cmdlet after making out-of-band changes to a server (for example, adding a memory DIMM or updating iLO firmware outside of HPE OneView) to bring the appliance's view back into sync.
+
+The `RefreshWithCredentials` parameter set allows you to supply updated iLO credentials if the iLO password has changed since the server was originally imported. You can also provide a new `-Hostname` if the iLO IP address has changed.
+
+The cmdlet accepts server hardware objects and server profile objects from the pipeline.
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The server hardware or server profile object to refresh. Accepts pipeline input. The `Server` and `name` aliases are also accepted.
+</ParamField>
+
+<ParamField path="Credential" type="PSCredential">
+  Updated iLO credentials to use for the refresh. Required for the `RefreshWithCredentials` parameter set. Use this when the iLO password has been changed since the server was added to HPE OneView.
+</ParamField>
+
+<ParamField path="Hostname" type="String">
+  Updated iLO hostname or IP address. Optional within the `RefreshWithCredentials` parameter set — use this if the iLO IP address has changed.
+</ParamField>
+
+<ParamField path="Force" type="Switch">
+  Force the refresh even if the appliance considers the server state to be current. Available in the `RefreshWithCredentials` parameter set.
+</ParamField>
+
+<ParamField path="Async" type="Switch">
+  Return the async task object immediately without waiting for the refresh to complete.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session. Accepted from the pipeline by property name.
+</ParamField>
+
+## Examples
+
+### Refresh a server by name
+
+```powershell
+$server = Get-OVServer -Name "Encl1, bay 1"
+Update-OVServer -InputObject $server
+```
+
+Triggers a synchronous refresh of `Encl1, bay 1` and waits for the task to complete.
+
+### Refresh using the pipeline
+
+```powershell
+Get-OVServer -Name "Encl1, bay 1" | Update-OVServer
+```
+
+Pipes the server object directly to `Update-OVServer`.
+
+### Refresh all servers in an enclosure
+
+```powershell
+$tasks = Get-OVServer -Name "Encl1*" | Update-OVServer -Async
+$tasks | Wait-OVTaskComplete
+```
+
+Submits a refresh for every server in `Encl1` as async tasks and then waits for all of them to complete.
+
+### Refresh after an iLO password change
+
+```powershell
+$cred   = Get-Credential -UserName Administrator -Message "Updated iLO password"
+$server = Get-OVServer -Name "dl380-prod-01"
+Update-OVServer -InputObject $server -Credential $cred
+```
+
+Re-establishes the iLO connection using the updated credentials and refreshes the server state.
+
+### Refresh after an iLO IP address change
+
+```powershell
+$cred   = Get-Credential -UserName Administrator -Message "iLO credentials"
+$server = Get-OVServer -Name "dl380-prod-01"
+Update-OVServer -InputObject $server -Credential $cred -Hostname "192.168.1.101"
+```
+
+Updates both the iLO IP address and credentials, then refreshes the server.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+Returns an async task resource for the refresh operation.
+
+## Related cmdlets
+
+- [Get-OVServer](/cmdlets/server/get-ovserver)
+- [Add-OVServer](/cmdlets/server/add-ovserver)
+- [Remove-OVServer](/cmdlets/server/remove-ovserver)

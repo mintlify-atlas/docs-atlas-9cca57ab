@@ -1,0 +1,172 @@
+---
+title: "Appliance connections"
+description: "Understand how the HPE OneView PowerShell library tracks and manages connections to one or more HPE OneView appliances using the HPEOneView.Appliance.Connection object and the $ConnectedSessions global variable."
+---
+
+The HPE OneView PowerShell library supports simultaneous connections to multiple HPE OneView or HPE Synergy Composer appliances within a single PowerShell session. To enable this, the library uses a structured connection object and a global session tracker.
+
+When you call `Connect-OVMgmt`, the library creates an `HPEOneView.Appliance.Connection` object and adds it to the global variable `$ConnectedSessions`. All subsequent cmdlets use this tracker to determine which appliance to target.
+
+## The $ConnectedSessions global variable
+
+`$ConnectedSessions` is a module-level global variable that holds a collection of `HPEOneView.Appliance.Connection` objects — one per successful authentication. You can inspect it at any time:
+
+```powershell
+$ConnectedSessions
+```
+
+```
+ConnectionID Name             UserName      AuthLoginDomain Default
+------------ ----             --------      --------------- -------
+1            hpov1.domain.com Administrator LOCAL           True
+2            hpov2.domain.com Administrator LOCAL           False
+```
+
+## The HPEOneView.Appliance.Connection object
+
+Each successful `Connect-OVMgmt` call creates one `HPEOneView.Appliance.Connection` object. This object tracks session state and metadata for a single appliance connection.
+
+<AccordionGroup>
+  <Accordion title="Connection object properties">
+
+| Property | Type | Description |
+|---|---|---|
+| `ConnectionID` | `[Int]` | A unique integer ID assigned per PowerShell session, incremented for each new connection. |
+| `Name` | `[String]` | The hostname of the appliance, as specified in the `-Hostname` parameter of `Connect-OVMgmt`. |
+| `SessionID` | `[String]` | The appliance API authentication session token. Changes when you modify active permissions with `Push-OVAppliancePermission`. |
+| `UserName` | `[String]` | The username that authenticated to the appliance. |
+| `AuthLoginDomain` | `[String]` | The name of the authentication directory resource used to authenticate the user. Set to `LOCAL` for local accounts. |
+| `Default` | `[Bool]` | Indicates whether this connection is the default target for cmdlets that do not specify `-ApplianceConnection`. Only one connection can be the default at a time. |
+| `ApplianceType` | `[String]` | The type of connected appliance (e.g., `Composer`, `VM`). Used internally for cmdlet validation. |
+| `AuthType` | `[String]` | The authentication method used: `Credential` for username/password, or `Certificate` for smart card / X.509 two-factor authentication. |
+| `ActivePermissions` | `[Collection]` | A collection of `HPEOneView.Appliance.ConnectionPermission` objects representing the roles and scopes available to the authenticated user. |
+| `ApplianceSecurityRoles` | `[Array]` | The full list of roles supported by this appliance. Used internally to validate role assignments. |
+
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+The `SSLChecked` property is deprecated and no longer valid in current library versions.
+</Note>
+
+## Connecting to multiple appliances
+
+You can connect to multiple appliances in sequence. Each call to `Connect-OVMgmt` appends a new connection to `$ConnectedSessions`.
+
+```powershell
+$Connection1 = Connect-OVMgmt -Hostname hpov1.domain.com -Credential (Get-Credential)
+$Connection2 = Connect-OVMgmt -Hostname hpov2.domain.com -Credential (Get-Credential)
+
+$ConnectedSessions
+```
+
+```
+ConnectionID Name             UserName      AuthLoginDomain Default
+------------ ----             --------      --------------- -------
+1            hpov1.domain.com Administrator LOCAL           True
+2            hpov2.domain.com Administrator LOCAL           False
+```
+
+<Tip>
+Save the object returned by `Connect-OVMgmt` to a variable. You can then pass it directly to the `-ApplianceConnection` parameter of any cmdlet instead of looking it up from `$ConnectedSessions`.
+</Tip>
+
+## Using -ApplianceConnection in cmdlets
+
+Most cmdlets accept an `-ApplianceConnection` parameter. If you do not provide it, the cmdlet defaults to processing all entries in `$ConnectedSessions` (or just the default connection, depending on the cmdlet).
+
+You can specify the target appliance in two ways:
+
+### By connection object
+
+Pass the `HPEOneView.Appliance.Connection` object you saved from `Connect-OVMgmt`:
+
+```powershell
+$Connection1 = Connect-OVMgmt -Hostname hpov1.domain.com -Credential (Get-Credential)
+$Connection2 = Connect-OVMgmt -Hostname hpov2.domain.com -Credential (Get-Credential)
+
+# Query only hpov1
+Get-OVNetwork -ApplianceConnection $Connection1
+```
+
+### By connection name
+
+Pass the appliance hostname string (matching the `Name` property):
+
+```powershell
+$Connection1 = Connect-OVMgmt -Hostname hpov1.domain.com -Credential (Get-Credential)
+$Connection2 = Connect-OVMgmt -Hostname hpov2.domain.com -Credential (Get-Credential)
+
+# Query only hpov1 by name
+Get-OVNetwork -ApplianceConnection hpov1.domain.com
+```
+
+## The Default property
+
+When you connect to your first appliance, the `Default` property on that connection is automatically set to `True`. Subsequent connections are added with `Default = False`.
+
+Cmdlets that target a single appliance use the default connection when `-ApplianceConnection` is not specified. To change which connection is the default, use `Set-OVApplianceDefaultConnection`:
+
+```powershell
+$Connection1 = Connect-OVMgmt -Hostname hpov1.domain.com -Credential (Get-Credential)
+$Connection2 = Connect-OVMgmt -Hostname hpov2.domain.com -Credential (Get-Credential)
+
+$ConnectedSessions
+```
+
+```
+ConnectionID Name             UserName      AuthLoginDomain Default
+------------ ----             --------      --------------- -------
+1            hpov1.domain.com Administrator LOCAL           True
+2            hpov2.domain.com Administrator LOCAL           False
+```
+
+```powershell
+# Make hpov2 the default
+$Connection2 | Set-OVApplianceDefaultConnection
+```
+
+```
+ConnectionID Name             UserName      AuthLoginDomain Default
+------------ ----             --------      --------------- -------
+1            hpov1.domain.com Administrator LOCAL           False
+2            hpov2.domain.com Administrator LOCAL           True
+```
+
+You can also pass the connection by name:
+
+```powershell
+Set-OVApplianceDefaultConnection -ApplianceConnection hpov2.domain.com
+```
+
+## ApplianceConnection property on returned resource objects
+
+Every resource object returned by a cmdlet includes an `ApplianceConnection` property of type `HPEOneView.Library.ApplianceConnection`. This lightweight object identifies which appliance the resource came from.
+
+```
+ApplianceConnection
+  ├── ConnectionID  [Int]
+  └── Name          [String]
+```
+
+The `ConnectionID` and `Name` values match the corresponding entry in `$ConnectedSessions`. You can reference these properties when passing resources to other cmdlets such as `Send-OVRequest`:
+
+```powershell
+$ServerProfile = Get-OVServerProfile -Name "Web-Server-01"
+
+# Inspect which appliance owns this resource
+$ServerProfile.ApplianceConnection.Name
+$ServerProfile.ApplianceConnection.ConnectionID
+```
+
+<Warning>
+Each resource object is unique to the appliance it was retrieved from. Do not use resource objects from one appliance connection with cmdlets targeting a different appliance.
+</Warning>
+
+## See also
+
+- [Connection permissions](/concepts/connection-permissions) — Manage roles and scopes for an active session
+- [Two-factor authentication](/concepts/two-factor-authentication) — Authenticate with smart cards and X.509 certificates
+- `Get-Help Connect-OVMgmt`
+- `Get-Help Set-OVApplianceDefaultConnection`
+- `Get-Help Disconnect-OVMgmt`

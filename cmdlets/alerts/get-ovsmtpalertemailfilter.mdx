@@ -1,0 +1,93 @@
+---
+title: "Get-OVSmtpAlertEmailFilter"
+description: "Retrieve email alert filter rules configured on an HPE OneView appliance."
+---
+
+## Synopsis
+
+Get one or all email alert filter rules from the HPE OneView SMTP configuration.
+
+## Syntax
+
+```powershell
+Get-OVSmtpAlertEmailFilter
+    [-Name <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVSmtpAlertEmailFilter` retrieves the email alert filter rules stored in the appliance's SMTP configuration. Each filter rule defines:
+
+- A display name for the filter.
+- An optional OData/index query expression that selects which alerts match.
+- A list of recipient email addresses.
+- An optional scope query that restricts matching to specific resource scopes.
+- A disabled flag.
+
+If Remote Support is enabled on the appliance, a synthetic `Remote Support` filter entry is also included in the results (read-only).
+
+Filter objects returned by this cmdlet can be passed to `Set-OVSmtpAlertEmailFilter` to modify them or to `Remove-OVSmtpAlertEmailFilter` to delete them.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+Filter by the filter rule's display name (`filterName` property). When omitted, all defined filters are returned.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Get all email alert filters
+
+```powershell
+Get-OVSmtpAlertEmailFilter
+```
+
+### Get a specific filter by name
+
+```powershell
+Get-OVSmtpAlertEmailFilter -Name 'Critical Infrastructure Alerts'
+```
+
+### Check whether any filters are disabled
+
+```powershell
+Get-OVSmtpAlertEmailFilter | Where-Object { $_.disabled } | Select-Object filterName, emails
+```
+
+### Pipe a filter into Set-OVSmtpAlertEmailFilter to update recipients
+
+```powershell
+$filter = Get-OVSmtpAlertEmailFilter -Name 'Critical Infrastructure Alerts'
+Set-OVSmtpAlertEmailFilter -InputObject $filter -Emails 'newteam@corp.example.com','backup@corp.example.com'
+```
+
+## Output
+
+`HPEOneView.Appliance.AlertEmailFilter`
+
+Key properties:
+
+| Property | Type | Description |
+|---|---|---|
+| `filterName` | String | Display name of the filter rule |
+| `filter` | String | Index query expression that selects matching alerts |
+| `emails` | String[] | List of recipient email addresses |
+| `scopeQuery` | String | Scope restriction query |
+| `disabled` | Boolean | Whether this filter is currently disabled |
+| `customEmailSenderEnabled` | Boolean | Whether a custom sender address is used |
+| `customSenderEmailAddress` | String | Custom sender email address (if enabled) |
+| `ApplianceConnection` | Object | Appliance the filter was retrieved from |
+
+## Related cmdlets
+
+- [Get-OVSMTPConfig](/cmdlets/alerts/get-ovsmtpconfig)
+- [Set-OVSmtpConfig](/cmdlets/alerts/set-ovsmtpconfig)
+- [Add-OVSmtpAlertEmailFilter](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [Set-OVSmtpAlertEmailFilter](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage
+- [Remove-OVSmtpAlertEmailFilter](https://github.com/HewlettPackard/POSH-HPEOneView) — see source repository for cmdlet usage

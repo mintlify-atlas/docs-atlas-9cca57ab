@@ -1,0 +1,172 @@
+---
+title: "Add-OVEnclosure"
+description: "Add an HPE BladeSystem c-Class blade enclosure to HPE OneView management."
+---
+
+## Synopsis
+
+Add an HPE ProLiant c-Class blade enclosure (HPE BladeSystem) to HPE OneView for managed or monitored operation.
+
+## Syntax
+
+**Managed — using PSCredential (recommended)**
+
+```powershell
+Add-OVEnclosure
+    -Hostname <String>
+    -EnclosureGroup <Object>
+    -Credential <PSCredential>
+    [-LicensingIntent <String>]
+    [-Baseline <Object>]
+    [-ForceInstallFirmware]
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**Monitored — using PSCredential**
+
+```powershell
+Add-OVEnclosure
+    -Hostname <String>
+    -Credential <PSCredential>
+    -Monitored
+    [-Scope <HPEOneView.Appliance.ScopeCollection[]>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Add-OVEnclosure` imports an HPE BladeSystem c-Class enclosure (c3000 or c7000) into HPE OneView. The enclosure can be added in one of two modes:
+
+- **Managed**: OneView actively manages the enclosure, blade servers, and interconnects. An enclosure group is required and a OneView Advanced license is consumed.
+- **Monitored**: OneView monitors the enclosure for health and inventory without active management. No enclosure group is required. A OneView Standard license is used.
+
+<Note>
+This cmdlet is for HPE BladeSystem **c-Class** enclosures only. HPE Synergy frames are discovered differently — use `Add-OVRemoteFrame` or rely on the initial Composer discovery process. Synergy frames cannot be added with `Add-OVEnclosure`.
+</Note>
+
+The `-Credential` parameter is the preferred authentication method. The legacy `-Username` and `-Password` parameters are deprecated and will trigger a warning.
+
+This operation is long-running. By default, the cmdlet waits for the task to complete. Use `-Async` to return the task object immediately and poll with `Wait-OVTaskComplete`.
+
+## Parameters
+
+<ParamField path="Hostname" type="String" required>
+  The IP address or fully-qualified DNS name of the enclosure's Onboard Administrator (OA).
+</ParamField>
+
+<ParamField path="EnclosureGroup" type="Object" required>
+  The enclosure group to associate with this enclosure. Accepts an enclosure group name (string) or a group object returned by `Get-OVEnclosureGroup`. Required for managed mode; not applicable for monitored mode.
+</ParamField>
+
+<ParamField path="Credential" type="PSCredential" required>
+  A `PSCredential` object containing the Onboard Administrator username and password. Use `Get-Credential` to create one interactively.
+</ParamField>
+
+<ParamField path="LicensingIntent" type="String">
+  The licensing intent for the enclosure. Valid values:
+
+  - `OneView` (default) — Applies an HPE OneView Advanced license to all server blades.
+  - `OneViewNoiLO` — Applies an HPE OneView Advanced without iLO license.
+</ParamField>
+
+<ParamField path="Baseline" type="Object">
+  An SPP (Service Pack for ProLiant) firmware baseline object to associate with the enclosure, returned by `Get-OVBaseline`.
+</ParamField>
+
+<ParamField path="ForceInstallFirmware" type="SwitchParameter">
+  Forces firmware installation even if the target version is older than the currently installed version.
+</ParamField>
+
+<ParamField path="Monitored" type="SwitchParameter">
+  Adds the enclosure in monitored-only mode. OneView collects hardware health and inventory data but does not manage the servers or interconnects.
+</ParamField>
+
+<ParamField path="Scope" type="HPEOneView.Appliance.ScopeCollection[]">
+  One or more scope objects to assign to the enclosure at import time. Use `Get-OVScope` to retrieve scope objects.
+</ParamField>
+
+<ParamField path="Async" type="SwitchParameter">
+  Returns the async task object immediately without waiting for the operation to complete. Use `Wait-OVTaskComplete` to block until finished.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The HPE OneView appliance connection. Defaults to the current default session. Only a single appliance connection is supported for this cmdlet.
+</ParamField>
+
+## Examples
+
+### Example 1: Add a managed c7000 enclosure
+
+Add an HPE BladeSystem c7000 enclosure with an existing enclosure group, using credentials.
+
+```powershell
+$Credential    = Get-Credential -UserName administrator
+$EnclosureGroup = Get-OVEnclosureGroup -Name "Prod EG 1"
+
+Add-OVEnclosure `
+    -Hostname       '172.18.1.11' `
+    -EnclosureGroup $EnclosureGroup `
+    -Credential     $Credential `
+    -LicensingIntent OneView
+```
+
+### Example 2: Add an enclosure asynchronously and wait
+
+Start the import in the background and then wait for it to complete.
+
+```powershell
+$Credential    = Get-Credential -UserName administrator
+$EnclosureGroup = Get-OVEnclosureGroup -Name "Prod EG 1"
+
+$Task = Add-OVEnclosure `
+    -Hostname       '172.18.1.11' `
+    -EnclosureGroup $EnclosureGroup `
+    -Credential     $Credential `
+    -Async
+
+$Task | Wait-OVTaskComplete
+```
+
+### Example 3: Add a monitored enclosure
+
+Add an enclosure in monitored mode — no enclosure group required, no license consumed.
+
+```powershell
+$Credential = Get-Credential -UserName administrator
+
+Add-OVEnclosure `
+    -Hostname   '172.18.1.12' `
+    -Credential $Credential `
+    -Monitored
+```
+
+### Example 4: Pipeline from enclosure group
+
+Pipe the enclosure group object directly into `Add-OVEnclosure`.
+
+```powershell
+$Credential = Get-Credential -UserName administrator
+
+Get-OVEnclosureGroup -Name "Prod EG 1" | Add-OVEnclosure `
+    -Hostname   '172.18.1.11' `
+    -Credential $Credential
+```
+
+## Output
+
+Returns a task object (`HPEOneView.Appliance.TaskResource`) representing the enclosure import operation. When the task completes successfully, the enclosure is visible via `Get-OVEnclosure`.
+
+If `-Async` is not specified, the cmdlet blocks until the task finishes and returns the completed task.
+
+## Related cmdlets
+
+- `Get-OVEnclosure` — Retrieve enclosures managed by OneView.
+- `Get-OVEnclosureGroup` — Retrieve enclosure group templates.
+- `New-OVEnclosureGroup` — Create a new enclosure group.
+- `Remove-OVEnclosure` — Remove an enclosure from OneView.
+- `Add-OVRemoteFrame` — Add an HPE Synergy remote frame.

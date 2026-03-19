@@ -1,0 +1,106 @@
+---
+title: "Get-OVDataCenter"
+description: "Retrieve data center objects used for physical location and capacity planning in HPE OneView."
+---
+
+## Synopsis
+
+Retrieve one or more data center objects from the HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVDataCenter
+    [-Name <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVDataCenter` retrieves data center resource objects from HPE OneView. A data center represents a physical facility or room in which IT equipment is installed. Data centers in HPE OneView are used for:
+
+- Physical location tracking of racks, enclosures, and servers.
+- Capacity planning — floor space, power (kW), and cooling (BTU/hr) budgets.
+- Visualizing floor layout in the HPE OneView Data Center view.
+
+Racks are placed within data centers, and enclosures and servers are placed within racks, creating a complete physical location hierarchy.
+
+Use `-Name` to filter by data center name. Wildcard characters (`*` and `?`) are supported.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name (or wildcard pattern) of the data center to retrieve.
+
+  Example: `"DC-*"` returns all data centers whose name begins with `DC-`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The HPE OneView appliance connection object or connection name. Defaults to the current default connection stored in `${Global:ConnectedSessions}`.
+</ParamField>
+
+## Examples
+
+### Example 1: List all data centers
+
+Return all data centers defined on the appliance.
+
+```powershell
+Get-OVDataCenter
+```
+
+```
+Name              Width  Depth  DefaultPowerLineVoltage  TotalKW
+----              -----  -----  -----------------------  -------
+Primary DC        10000  20000  220                      150
+DR Site           8000   15000  110                      75
+```
+
+### Example 2: Get a specific data center
+
+Retrieve a single data center by exact name.
+
+```powershell
+$DC = Get-OVDataCenter -Name "Primary DC"
+$DC | Format-List
+```
+
+### Example 3: Filter with a wildcard
+
+Return all data centers whose names start with `Primary`.
+
+```powershell
+Get-OVDataCenter -Name "Primary*"
+```
+
+### Example 4: Get data centers from all connected appliances
+
+Query all active appliance connections.
+
+```powershell
+Get-OVDataCenter -ApplianceConnection ${Global:ConnectedSessions}
+```
+
+### Example 5: List racks within a data center
+
+Retrieve the data center object, then find racks located in it.
+
+```powershell
+$DC = Get-OVDataCenter -Name "Primary DC"
+Get-OVRack -Datacenter $DC
+```
+
+## Output
+
+Returns one or more `HPEOneView.Facilities.DataCenter` objects. Key properties include `name`, `width`, `depth`, `defaultPowerLineVoltage`, `coolingCapacity`, `powerCapacity`, and `uri`.
+
+Returns an empty collection when no matching data centers are found.
+
+## Related cmdlets
+
+- `New-OVDataCenter` — Create a new data center.
+- `Set-OVDataCenter` — Modify an existing data center.
+- `Remove-OVDataCenter` — Delete a data center.
+- `Get-OVRack` — Retrieve racks placed within a data center.
+- `Add-OVRackToDataCenter` — Place a rack in a data center.

@@ -1,0 +1,107 @@
+---
+title: "New-OVNetworkSet"
+description: "Create a new network set by grouping Ethernet networks for use in server profile connections."
+---
+
+## Synopsis
+
+Creates a new network set resource that groups Ethernet networks for assignment to server profile connections.
+
+## Syntax
+
+```powershell
+New-OVNetworkSet
+    -Name <String>
+    [-Networks <Object>]
+    [-UntaggedNetwork <Object>]
+    [-Large]
+    [-TypicalBandwidth <Int32>]
+    [-MaximumBandwidth <Int32>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVNetworkSet` creates a network set that bundles multiple Ethernet networks into a single object. When a network set is assigned to a server profile connection, the server can access all member networks through that one connection. The hypervisor or operating system handles per-VLAN traffic using 802.1Q tagging.
+
+One member network can be designated as the untagged (native) VLAN by specifying it with `-UntaggedNetwork`. Traffic sent on that network does not carry a VLAN tag, which is required for operating systems that do not support 802.1Q trunking.
+
+Bandwidth limits apply to the network set as a whole and are shared across all member networks.
+
+## Parameters
+
+<ParamField path="Name" type="String" required>
+  The name for the new network set.
+</ParamField>
+
+<ParamField path="Networks" type="Object">
+  One or more Ethernet network objects (from `Get-OVNetwork`) to include in the network set. You can also pass an array of network objects.
+</ParamField>
+
+<ParamField path="UntaggedNetwork" type="Object">
+  The Ethernet network to designate as the untagged (native) VLAN. This network must also be included in the `-Networks` list. Traffic on this network is sent untagged.
+
+  Aliases: `-untagged`, `-native`, `-untaggedNetworkUri`.
+</ParamField>
+
+<ParamField path="Large" type="Switch">
+  Creates a large network set. Large network sets support more than 128 networks and are designed for environments requiring extensive VLAN trunking.
+</ParamField>
+
+<ParamField path="TypicalBandwidth" type="Int32">
+  The preferred bandwidth allocation for this network set, in Mb/s. Valid range: 2–50000. Default: 2500.
+</ParamField>
+
+<ParamField path="MaximumBandwidth" type="Int32">
+  The maximum bandwidth allocation for this network set, in Mb/s. Valid range: 2–50000. Default: 10000.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Create a network set from existing networks
+
+```powershell
+$network20 = Get-OVNetwork -Name "blue"   -Type Ethernet
+$network30 = Get-OVNetwork -Name "green"  -Type Ethernet
+$network40 = Get-OVNetwork -Name "yellow" -Type Ethernet
+
+New-OVNetworkSet -Name "Production Networks" `
+    -UntaggedNetwork $network20 `
+    -Networks $network20, $network30, $network40
+```
+
+### Create a network set with custom bandwidth and untagged network
+
+```powershell
+$network20 = Get-OVNetwork -Name "VLAN 20" -Type Ethernet
+$network30 = Get-OVNetwork -Name "VLAN 30" -Type Ethernet
+$network40 = Get-OVNetwork -Name "VLAN 40" -Type Ethernet
+
+New-OVNetworkSet -Name "Production Networks" `
+    -UntaggedNetwork $network20 `
+    -Networks $network20, $network30, $network40 `
+    -TypicalBandwidth 5000 `
+    -MaximumBandwidth 20000
+```
+
+### Create a large network set
+
+```powershell
+$nets = Get-OVNetwork -Name "VLAN *" -Type Ethernet
+New-OVNetworkSet -Name "All VLANs" -Networks $nets -Large
+```
+
+## Output
+
+`HPEOneView.Networking.NetworkSet` object representing the newly created network set.
+
+## Related cmdlets
+
+- [Get-OVNetworkSet](/cmdlets/networking/get-ovnetworkset)
+- [Get-OVNetwork](/cmdlets/networking/get-ovnetwork)
+- [New-OVNetwork](/cmdlets/networking/new-ovnetwork)

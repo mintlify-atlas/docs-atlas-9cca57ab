@@ -1,0 +1,184 @@
+---
+title: "Update-OVServerFirmware"
+description: "Update server firmware to match a firmware baseline for Gen10 and newer server hardware or server profiles."
+---
+
+## Synopsis
+
+Applies a firmware baseline to a Gen10 or newer server hardware resource or server profile, updating installed components to match the specified SPP.
+
+## Syntax
+
+```powershell
+Update-OVServerFirmware
+    -InputObject <Object>
+    -Baseline <Object>
+    [-PatchLevel <Version>]
+    [-FirmwareInstallationPolicy <String>]
+    [-FirmwareInstallMode <String>]
+    [-ReinstallFirmware]
+    [-PreviewOnly]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Update-OVServerFirmware` deploys a firmware baseline to a target server hardware or server profile resource. It generates a compliance preview first to determine which components need to be updated, then initiates the firmware deployment.
+
+**Platform requirements:**
+
+- Server hardware must be Gen10 or newer.
+- When targeting server hardware directly, the server must not have a server profile assigned and must have an iLO Advanced license (or HPE OneView Advanced/Standard + iLO Advanced).
+- When targeting a server profile, the profile's firmware management settings are updated to reference the specified baseline.
+
+The `-FirmwareInstallMode` parameter controls the scope of the update:
+
+| Mode | Behavior |
+|---|---|
+| `FirmwareAndSoftware` (default) | Updates firmware and OS drivers |
+| `FirmwareOnly` | Updates firmware only (offline, server must be powered off) |
+| `FirmwareOffline` | Offline firmware update |
+| `FirmwareAndOSDrivers` | Updates firmware and OS-level drivers |
+| `FirmwareOnlyOfflineMode` | Offline firmware-only mode |
+
+The `-FirmwareInstallationPolicy` parameter controls when components are updated:
+
+| Policy | Behavior |
+|---|---|
+| `LowerThanBaseline` (default) | Only updates components older than the baseline |
+| `NotEqualToBaseline` | Updates components that differ from the baseline (including downgrades) |
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The server hardware or server profile resource to update. Accepts objects from `Get-OVServer` or `Get-OVServerProfile`, or pipeline input.
+
+  Aliases: `Server`, `ServerHardware`, `ServerProfile`
+</ParamField>
+
+<ParamField path="Baseline" type="Object" required>
+  The firmware baseline (SPP) to deploy. Accepts an `HPEOneView.Appliance.Baseline` object from `Get-OVBaseline`.
+</ParamField>
+
+<ParamField path="PatchLevel" type="Version">
+  An optional specific patch-level version within the baseline to target. The patch level must exist in the `servicePackData.supplements` collection of the baseline object.
+</ParamField>
+
+<ParamField path="FirmwareInstallationPolicy" type="String">
+  Controls which components are updated.
+
+  - `LowerThanBaseline` (default) — only update components with versions older than the baseline.
+  - `NotEqualToBaseline` — update any component whose version does not exactly match the baseline, including downgrading components that are newer.
+</ParamField>
+
+<ParamField path="FirmwareInstallMode" type="String">
+  The installation mode for the firmware update. Defaults to `FirmwareAndSoftware`.
+
+  Valid values: `FirmwareOnly`, `FirmwareAndSoftware`, `FirmwareOffline`, `FirmwareAndOSDrivers`, `FirmwareOnlyOfflineMode`.
+
+  Aliases: `FirmwareMode`
+</ParamField>
+
+<ParamField path="ReinstallFirmware" type="SwitchParameter">
+  Force re-installation of firmware components even if the installed version already matches the baseline. Corresponds to the `forceApplyFirmware` property in the API.
+</ParamField>
+
+<ParamField path="PreviewOnly" type="SwitchParameter">
+  Generate and return the compliance preview without applying any firmware changes. Useful for reviewing what would be updated before committing.
+</ParamField>
+
+<ParamField path="Async" type="SwitchParameter">
+  Return the background task object immediately without waiting for the firmware update to complete. Use `Wait-OVTaskComplete` to block on the returned task.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specify one or more appliance connection objects or hostnames. Defaults to the default connected appliance (`$ConnectedSessions | Where-Object Default`).
+
+  Aliases: `Appliance`
+</ParamField>
+
+## Examples
+
+### Update a single server
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+$server = Get-OVServer -Name "Encl1, bay 1"
+Update-OVServerFirmware -InputObject $server -Baseline $baseline
+```
+
+Updates all firmware components on the server that are older than the specified SPP baseline.
+
+### Update and wait for completion
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+$task = Get-OVServer -Name "Encl1, bay 1" | Update-OVServerFirmware -Baseline $baseline -Async
+$task | Wait-OVTaskComplete
+```
+
+Initiates a firmware update asynchronously and waits for it to complete.
+
+### Bulk update all servers
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+$tasks = Get-OVServer | Update-OVServerFirmware -Baseline $baseline -Async
+$tasks | Wait-OVTaskComplete
+```
+
+Submits firmware update tasks for all managed servers simultaneously, then waits for all tasks to complete.
+
+### Preview what would be updated
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+Get-OVServer -Name "Encl1, bay 1" | Update-OVServerFirmware -Baseline $baseline -PreviewOnly
+```
+
+Displays the compliance preview (which components would be updated and to what version) without applying any changes.
+
+### Update using NotEqualToBaseline policy
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+$server = Get-OVServer -Name "Encl1, bay 1"
+Update-OVServerFirmware -InputObject $server -Baseline $baseline -FirmwareInstallationPolicy NotEqualToBaseline
+```
+
+Updates or downgrades components so that every component version exactly matches the baseline.
+
+### Update a server profile's firmware baseline
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+$profile = Get-OVServerProfile -Name "Web-Server-01"
+Update-OVServerFirmware -InputObject $profile -Baseline $baseline -FirmwareInstallMode FirmwareAndSoftware -Async | Wait-OVTaskComplete
+```
+
+Updates the firmware baseline reference in a server profile and triggers the firmware update.
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+A task resource is returned representing the firmware update operation. When `-Async` is not specified, the cmdlet blocks until the task completes.
+
+Component-level compliance details returned before the update:
+
+| Property | Description |
+|---|---|
+| `componentName` | Name of the firmware component |
+| `installedVersion` | Currently installed version |
+| `baselineVersion` | Version in the specified baseline |
+| `operation` | `Update`, `Downgrade`, or `NoUpdate` |
+
+## Related cmdlets
+
+- [Get-OVBaseline](/cmdlets/firmware/get-ovbaseline)
+- [Show-OVFirmwareReport](/cmdlets/firmware/show-ovfirmwarereport)
+- [Get-OVServer](/cmdlets/server/get-ovserver)
+- [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)
+- [Wait-OVTaskComplete](/cmdlets/alerts/wait-ovtaskcomplete)

@@ -1,0 +1,175 @@
+---
+title: "Scopes and roles"
+description: "Understand HPE OneView built-in roles, how scopes restrict access to resource subsets, and how to manage scopes with Get-OVScope, New-OVScope, and Add-OVResourceToScope."
+---
+
+HPE OneView uses a combination of roles and scopes to control what users can do and which resources they can access. Roles define the type of access (create, read, update, delete) to a resource category. Scopes restrict that access to a specific subset of resources within a category.
+
+## Roles
+
+A role grants a user rights to a resource category. For example, the `Server administrator` role grants read, create, delete, update, and use rights to the `server hardware` category.
+
+Roles are assigned to local users (via `Set-OVUser`) or to directory groups (via `Set-OVLdapGroupRole`).
+
+### Built-in roles
+
+HPE OneView provides the following built-in roles. The full list of roles supported by a connected appliance is available in the `ApplianceSecurityRoles` property of the connection object.
+
+<AccordionGroup>
+  <Accordion title="Infrastructure Administrator">
+    Full access to all appliance resources and configuration. Can create and manage users, scopes, authentication directories, and appliance settings. This is the highest-privilege role.
+  </Accordion>
+  <Accordion title="Server Administrator">
+    Read, create, delete, update, and use rights to server hardware, server profiles, and server profile templates. Typically assigned to teams responsible for compute lifecycle.
+  </Accordion>
+  <Accordion title="Network Administrator">
+    Read, create, delete, and update rights to Ethernet networks, Fibre Channel networks, network sets, logical interconnects, logical interconnect groups, and uplink sets.
+  </Accordion>
+  <Accordion title="Storage Administrator">
+    Read, create, delete, and update rights to storage systems, storage pools, storage volumes, and volume templates.
+  </Accordion>
+  <Accordion title="Firmware Administrator">
+    Rights to upload and manage firmware baselines and apply firmware updates to managed resources.
+  </Accordion>
+  <Accordion title="Backup Administrator">
+    Rights to create and manage appliance backups and restore operations.
+  </Accordion>
+  <Accordion title="Scope Administrator">
+    Rights to create, update, and delete scopes, and to assign resources to scopes. Can also assign scope-based permissions to users and groups, limited to the scopes they administer.
+  </Accordion>
+  <Accordion title="Read only">
+    Read-only access to all resources. Cannot create, update, or delete any resource.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+To retrieve the exact list of roles supported by your connected appliance, inspect `$ConnectedSessions[0].ApplianceSecurityRoles`.
+</Note>
+
+## Scopes
+
+A scope is a named collection of resources. When a permission is assigned with a scope, the role rights are restricted to only the resources that are members of that scope.
+
+For example, if a `Server administrator` permission is assigned with a scope named `Site A`, the user can only manage server hardware that has been added to the `Site A` scope. Servers outside that scope are invisible to the user.
+
+### Resource types that support scoping
+
+The following resource categories can be added to scopes:
+
+- Enclosures
+- Server hardware
+- Networks (Ethernet, FC, and FCoE)
+- Network sets
+- Interconnects (excluding SAS resources)
+- Logical interconnects (excluding SAS resources)
+- Logical interconnect groups (excluding SAS resources)
+- Switches
+- Logical switches
+- Logical switch groups
+
+## Role-based vs scope-based permissions
+
+| Concept | What it controls |
+|---|---|
+| Role only | Access type (read/write/delete) to an entire resource category across all resources |
+| Role + Scope | Access type restricted to the named subset of resources within that category |
+
+A user can hold multiple permissions with different role and scope combinations. For example:
+
+```
+RoleName              ScopeName     Active
+--------              ---------     ------
+Network administrator Site A Admins True
+Server administrator  AllResources  True
+```
+
+This user can manage all server hardware on the appliance, but can only manage networks that belong to the `Site A Admins` scope.
+
+## Managing scopes
+
+### Retrieving scopes
+
+Use `Get-OVScope` to retrieve existing scopes:
+
+```powershell
+# Get all scopes
+Get-OVScope
+
+# Get a specific scope by name
+$SiteAScope = Get-OVScope -Name 'Site A' -ErrorAction Stop
+```
+
+### Creating a scope
+
+Use `New-OVScope` to create a new scope:
+
+```powershell
+$NewScope = New-OVScope -Name 'Production' -Description 'Production environment resources'
+```
+
+<Note>
+Only users with the `Infrastructure Administrator` or `Scope Administrator` role can create scopes. Scope Administrators can only manage scopes that they administer.
+</Note>
+
+### Adding resources to a scope
+
+Use `Add-OVResourceToScope` to assign resources to a scope. Resources must be of a supported type (see the list above).
+
+```powershell
+# Get the scope
+$Scope = Get-OVScope -Name 'Production' -ErrorAction Stop
+
+# Add a server to the scope
+$Server = Get-OVServer -Name 'encl1, bay 1' -ErrorAction Stop
+Add-OVResourceToScope -Scope $Scope -InputObject $Server
+
+# Add a network to the scope
+$Network = Get-OVNetwork -Name 'Prod-VLAN-100' -ErrorAction Stop
+Add-OVResourceToScope -Scope $Scope -InputObject $Network
+```
+
+You can also pipe the scope object:
+
+```powershell
+$Scope = Get-OVScope -Name 'Production' -ErrorAction Stop
+$Servers = Get-OVServer
+
+$Scope | Add-OVResourceToScope -InputObject $Servers
+```
+
+For long-running operations, use the `-Async` switch to return a task object instead of waiting:
+
+```powershell
+$Task = Add-OVResourceToScope -Scope $Scope -InputObject $Server -Async
+$Task | Wait-OVTaskComplete
+```
+
+## Using -Scope to filter cmdlet output
+
+Cmdlets for scope-supported resource types accept a `-Scope` parameter that filters returned objects to only those belonging to the specified scope:
+
+```powershell
+$MyScopeObject = Get-OVScope -Name 'Site A' -ErrorAction Stop
+
+# Returns only networks in the 'Site A' scope
+Get-OVNetwork -Scope $MyScopeObject
+
+# Returns only servers in the 'Site A' scope
+Get-OVServer -Scope $MyScopeObject
+```
+
+Without `-Scope`, these cmdlets return all resources visible to the authenticated user based on their active permissions.
+
+<Tip>
+Combine scope filtering with `Push-OVAppliancePermission` to operate in a fully least-privilege mode: restrict active permissions to a scoped role, then filter cmdlet output using that same scope object.
+</Tip>
+
+## See also
+
+- [Connection permissions](/concepts/connection-permissions) — Reduce session privileges with Push-OVAppliancePermission
+- [Two-factor authentication](/concepts/two-factor-authentication) — Authenticate with smart cards and examine scoped permissions
+- `Get-Help Get-OVScope`
+- `Get-Help New-OVScope`
+- `Get-Help Add-OVResourceToScope`
+- `Get-Help Set-OVUser`
+- `Get-Help Set-OVLdapGroupRole`

@@ -1,0 +1,185 @@
+---
+title: "Add-OVStorageSystem"
+description: "Add an HPE storage system (3PAR, Primera, Alletra, Nimble) to HPE OneView management."
+---
+
+## Synopsis
+
+Adds a supported HPE storage system to the HPE OneView appliance for centralized management.
+
+## Syntax
+
+### StoreServ (default)
+
+```powershell
+Add-OVStorageSystem
+    -Hostname <String>
+    [-Credential <PSCredential>]
+    [-Username <String>]
+    [-Password <Object>]
+    [-Family <String>]
+    [-Domain <String>]
+    [-Ports <Hashtable>]
+    [-PortGroups <Hashtable>]
+    [-ShowSystemDetails]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### StoreVirtual / Nimble
+
+```powershell
+Add-OVStorageSystem
+    -Hostname <String>
+    [-Credential <PSCredential>]
+    [-Username <String>]
+    [-Password <Object>]
+    [-Family <String>]
+    [-VIPS <Hashtable>]
+    [-ShowSystemDetails]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Add-OVStorageSystem` registers a new storage array with the HPE OneView appliance. After adding the system, you can then manage storage pools, create volumes, and attach those volumes to server profiles.
+
+Credentials are required — provide them with either `-Credential` (a `PSCredential` object, recommended) or the `-Username`/`-Password` pair. The `-Password` parameter accepts both a plain `String` and a `SecureString`.
+
+For 3PAR and Primera arrays, you can optionally specify which host ports to register and which Ethernet networks to associate them with via `-Ports`, and group those ports with `-PortGroups`. If `-Domain` is not supplied, the default `NO DOMAIN` virtual domain is used.
+
+For StoreVirtual and Nimble systems, use `-VIPS` to map Virtual IP addresses to Ethernet networks.
+
+The cmdlet returns an async task object. Pipe to `Wait-OVTaskComplete` to block until the operation finishes.
+
+## Parameters
+
+<ParamField path="Hostname" type="String" required>
+  IP address or FQDN of the storage system controller.
+</ParamField>
+
+<ParamField path="Credential" type="PSCredential">
+  A `PSCredential` object containing the storage system administrator username and password. Preferred over `-Username`/`-Password`.
+</ParamField>
+
+<ParamField path="Username" type="String">
+  Storage system administrator username. Must be paired with `-Password`.
+</ParamField>
+
+<ParamField path="Password" type="Object">
+  Storage system administrator password. Accepts `String` or `SecureString`. Required when `-Username` is specified.
+</ParamField>
+
+<ParamField path="Family" type="String" default="StoreServ">
+  Storage system family. Accepted values: `Alletra5000`, `Alletra6000`, `Alletra9000`, `StoreServ`, `Nimble`, `Primera`. Defaults to `StoreServ`.
+</ParamField>
+
+<ParamField path="Domain" type="String" default="NO DOMAIN">
+  Virtual domain on the storage array to use. The value is case-sensitive. Applies to 3PAR/Primera/StoreServ systems only.
+</ParamField>
+
+<ParamField path="Ports" type="Hashtable">
+  Maps storage array host port addresses (e.g., `"0:1:1"`) to HPE OneView Ethernet or FC network names. Applies to StoreServ systems only.
+</ParamField>
+
+<ParamField path="PortGroups" type="Hashtable">
+  Maps host port addresses to named port group labels. Used with `-Ports`. Applies to StoreServ systems only.
+</ParamField>
+
+<ParamField path="VIPS" type="Hashtable">
+  Maps Virtual IP addresses to Ethernet network names. Required for StoreVirtual and Nimble systems.
+</ParamField>
+
+<ParamField path="ShowSystemDetails" type="SwitchParameter">
+  When specified, outputs the full system detail object after successful import.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  HPE OneView appliance connection. Defaults to the default connected session. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### Add a Primera/3PAR system with credential object
+
+```powershell
+$myStorageSystem      = "HPEStoreServ_1-array.contoso.com"
+$myStorageSystemCreds = Get-Credential -Username 3paradm -Message "3Paradm password"
+
+$params = @{
+    hostname   = $myStorageSystem
+    credential = $myStorageSystemCreds
+    domain     = "NODOMAIN"
+    Ports = @{
+        "0:1:1" = "3PAR SAN DA A"
+        "0:1:2" = "3PAR SAN Fabric A"
+        "1:1:1" = "3PAR SAN Fabric B"
+        "1:1:2" = "3PAR SAN DA B"
+    }
+    PortGroups = @{
+        "0:1:1" = "PG_1"
+        "0:1:2" = "PG_2"
+        "1:1:1" = "PG_1"
+        "1:1:2" = "PG_2"
+    }
+}
+
+Add-OVStorageSystem @params | Wait-OVTaskComplete
+```
+
+### Add a storage system with username and password, then add a pool
+
+```powershell
+$myStorageSystem       = "HP3Par_2-array.contoso.com"
+$myStorageSystemAdmin  = "3paradm"
+$myStorageSystemPass   = "3pardata"
+$myStorageSystemDomain = "VirtualDomain1"  # Value is case-sensitive
+
+$myStorageSystemPorts = @{
+    "1:1:1" = "Fabric A"
+    "2:1:1" = "FabricA"
+    "1:1:2" = "Fabric B"
+    "2:1:2" = "Fabric B"
+}
+
+$myStorageSystemPG = @{
+    "0:1:1" = "PG_1"
+    "0:1:2" = "PG_2"
+    "1:1:1" = "PG_1"
+    "1:1:2" = "PG_2"
+}
+
+$params = @{
+    hostname   = $myStorageSystem
+    username   = $myStorageSystemAdmin
+    password   = $myStorageSystemPass
+    domain     = $myStorageSystemDomain
+    Ports      = $myStorageSystemPorts
+    PortGroups = $myStorageSystemPG
+}
+
+Try {
+    Add-OVStorageSystem @params | Wait-OVTaskComplete
+    Add-OVStoragePool -StorageSystem $myStorageSystem -PoolName R1_FC_CPG | Wait-OVTaskComplete
+}
+Catch {
+    $PSCmdlet.ThrowTerminatingError($_)
+}
+```
+
+<Note>
+After `Add-OVStorageSystem` completes, add at least one storage pool with `Add-OVStoragePool` before you can provision volumes from this system.
+</Note>
+
+## Output
+
+`HPEOneView.Appliance.TaskResource`
+
+An asynchronous task object. Pipe to `Wait-OVTaskComplete` to wait for the operation to finish before proceeding.
+
+## Related cmdlets
+
+- [Get-OVStorageSystem](/cmdlets/storage/get-ovstoragesystem)
+- [Get-OVStoragePool](/cmdlets/storage/get-ovstoragepool)
+- [New-OVStorageVolume](/cmdlets/storage/new-ovstoragevolume)

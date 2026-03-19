@@ -1,0 +1,115 @@
+---
+title: "Get-OVUplinkSet"
+description: "Retrieve uplink set resources from a logical interconnect or Logical Interconnect Group."
+---
+
+## Synopsis
+
+Retrieves uplink set resources from the connected HPE OneView appliance, optionally filtered by name, type, or parent logical interconnect.
+
+## Syntax
+
+### By name
+
+```powershell
+Get-OVUplinkSet
+    [-Name <String>]
+    [-LogicalInterconnect <Object>]
+    [-Report]
+    [-ExportFile <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### By type
+
+```powershell
+Get-OVUplinkSet
+    [-LogicalInterconnect <Object>]
+    -Type <String>
+    [-Report]
+    [-ExportFile <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVUplinkSet` retrieves uplink set resources from HPE OneView. An uplink set defines the set of uplink ports and the networks that flow through them on an interconnect module. Uplink sets can be of type `Ethernet` (carries tagged/untagged Ethernet VLANs) or `FibreChannel` (carries FC SAN traffic).
+
+Uplink sets are scoped to a specific logical interconnect. Use the `-LogicalInterconnect` parameter to retrieve only the uplink sets belonging to a particular logical interconnect. Without this parameter, all uplink sets across all logical interconnects are returned.
+
+Results can be filtered by type using the `-Type` parameter.
+
+## Parameters
+
+<ParamField path="Name" type="String">
+  The name of the uplink set to retrieve. When omitted, all uplink sets are returned (subject to other filters).
+</ParamField>
+
+<ParamField path="LogicalInterconnect" type="Object">
+  A logical interconnect object (from `Get-OVLogicalInterconnect`) to scope the query. When provided, only uplink sets belonging to that logical interconnect are returned. Supports pipeline input.
+
+  Alias: `-liname`.
+</ParamField>
+
+<ParamField path="Type" type="String">
+  Filter results to a specific uplink set type. Accepted values: `Ethernet`, `FibreChannel`.
+</ParamField>
+
+<ParamField path="Report" type="Switch">
+  Display results in a formatted list view.
+
+  <Warning>This parameter is deprecated. The cmdlet now always returns objects in `Format-List` view. Providing `-Report` generates a deprecation warning.</Warning>
+</ParamField>
+
+<ParamField path="ExportFile" type="String">
+  Path to a JSON file where the retrieved uplink set objects will be exported.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Defaults to the default connected session.
+</ParamField>
+
+## Examples
+
+### Return all uplink sets
+
+```powershell
+Get-OVUplinkSet
+```
+
+### Return all uplink sets for a specific logical interconnect
+
+```powershell
+$li = Get-OVLogicalInterconnect -Name "Enclosure1-LIG"
+Get-OVUplinkSet -LogicalInterconnect $li
+```
+
+### Return all uplink sets via pipeline
+
+```powershell
+Get-OVLogicalInterconnect -Name "Enclosure1-LIG" | Get-OVUplinkSet
+```
+
+### Filter uplink sets by type
+
+```powershell
+Get-OVUplinkSet -Type FibreChannel
+```
+
+### Return a specific uplink set by name
+
+```powershell
+Get-OVUplinkSet -Name "Fabric A"
+```
+
+## Output
+
+`HPEOneView.Networking.UplinkSet` objects.
+
+## Related cmdlets
+
+- [New-OVUplinkSet](/cmdlets/networking/new-ovuplinkset)
+- [Get-OVLogicalInterconnect](/cmdlets/networking/get-ovlogicalinterconnect)
+- [Get-OVLogicalInterconnectGroup](/cmdlets/networking/get-ovlogicalinterconnectgroup)

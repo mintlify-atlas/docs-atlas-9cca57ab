@@ -1,0 +1,105 @@
+---
+title: "Set-OVApplianceDateTime"
+description: "Configure NTP servers, time synchronization mode, locale, and polling interval on the HPE OneView appliance."
+---
+
+## Synopsis
+
+Configures the time synchronization mode (NTP or host sync), NTP server list, polling interval, and display locale on the HPE OneView appliance.
+
+## Syntax
+
+**Sync with hypervisor host:**
+
+```powershell
+Set-OVApplianceDateTime
+    -SyncWithHost
+    [-Locale <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**Configure NTP servers:**
+
+```powershell
+Set-OVApplianceDateTime
+    -NTPServers <Array>
+    [-PollingInterval <Int>]
+    [-Locale <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVApplianceDateTime` configures the time synchronization settings of the HPE OneView appliance. Two modes are supported:
+
+- **SyncWithHost**: The appliance synchronizes its clock with the underlying hypervisor host. No NTP servers are needed.
+- **NTPServers**: The appliance uses the provided NTP server list to synchronize time. An optional polling interval (in seconds) can be specified.
+
+In both modes, the display locale can be set independently using `-Locale`. The supported locale values are `en_US` (English), `zh_CN` (Simplified Chinese), and `ja_JP` (Japanese).
+
+## Parameters
+
+<ParamField path="SyncWithHost" type="Switch" required>
+  Configures the appliance to synchronize time with the hypervisor host instead of NTP servers. Mutually exclusive with `-NTPServers`. Required in the `SyncHost` parameter set.
+</ParamField>
+
+<ParamField path="NTPServers" type="Array" required>
+  An array of NTP server hostnames or IP addresses. Required in the `NTPServers` parameter set. Example: `@('ntp1.domain.com', '192.168.1.1')`.
+</ParamField>
+
+<ParamField path="PollingInterval" type="Int">
+  The NTP polling interval in seconds. Only valid when `-NTPServers` is specified.
+</ParamField>
+
+<ParamField path="Locale" type="String">
+  The display locale for the appliance UI. Valid values: `en_US`, `zh_CN`, `ja_JP`. Optional in both parameter sets.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specifies the HPE OneView appliance connection(s) to configure. Defaults to the default connection from `${Global:ConnectedSessions}`. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+**Example 1: Configure NTP servers**
+
+```powershell
+Set-OVApplianceDateTime -NTPServers @('ntp1.domain.com', 'ntp2.domain.com')
+```
+
+Configures the appliance to synchronize time using the two specified NTP servers.
+
+**Example 2: Configure NTP with a custom polling interval and locale**
+
+```powershell
+Set-OVApplianceDateTime \
+    -NTPServers @('pool.ntp.org') \
+    -PollingInterval 3600 \
+    -Locale 'en_US'
+```
+
+Sets a single NTP server with a 1-hour polling interval and English locale.
+
+**Example 3: Synchronize with the hypervisor host clock**
+
+```powershell
+Set-OVApplianceDateTime -SyncWithHost
+```
+
+Configures the appliance to use the hypervisor host as the time source.
+
+**Example 4: Change locale only (preserving existing NTP config)**
+
+```powershell
+Set-OVApplianceDateTime -SyncWithHost -Locale 'ja_JP'
+```
+
+Sets the appliance display locale to Japanese while keeping host sync enabled.
+
+## Output
+
+`HPEOneView.Appliance.ApplianceLocaleDateTime`
+
+Returns the updated date/time configuration object after the change is applied.

@@ -1,0 +1,95 @@
+---
+title: "Get-OVScope"
+description: "Retrieve scope objects used to restrict resource access in HPE OneView."
+---
+
+## Synopsis
+
+Returns one or more scope objects from an HPE OneView appliance.
+
+## Syntax
+
+```powershell
+Get-OVScope
+    [-Name <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVScope` retrieves scope definitions from the appliance. Scopes are named collections of resources used to implement role-based access control at a granular level. By assigning a user a role within a specific scope, you restrict that role's permissions to only the resources belonging to that scope.
+
+Scope objects returned by this cmdlet can be passed to `New-OVUser` or `Set-OVUser` via the `-ScopePermissions` parameter, and to `Add-OVResourceToScope` to manage scope membership.
+
+Wildcard characters (`*`) are supported in the `Name` parameter.
+
+## Parameters
+
+<ParamField path="Name" type="string">
+  The name of the scope to retrieve. Supports wildcard characters (`*`). When omitted, all scopes are returned.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object" default="Default connected session">
+  The appliance connection object or name. Defaults to the default connected session in `$ConnectedSessions`. Accepts an array of connections to query multiple appliances. Aliased as `Appliance`.
+</ParamField>
+
+## Examples
+
+### List all scopes
+
+```powershell
+Get-OVScope
+```
+
+Returns every scope defined on the default connected appliance.
+
+### Get a specific scope by name
+
+```powershell
+Get-OVScope -Name 'Production'
+```
+
+Returns the scope named `Production`.
+
+### Use a wildcard to find scopes by pattern
+
+```powershell
+Get-OVScope -Name 'Prod*'
+```
+
+Returns all scopes whose names begin with `Prod`.
+
+### Get a scope to use in a permission assignment
+
+```powershell
+$scope = Get-OVScope -Name 'Production'
+
+$permissions = @(
+    @{ Role = 'Server administrator'; Scope = $scope }
+)
+
+Set-OVUser -UserName 'jsmith' -ScopePermissions $permissions
+```
+
+Retrieves the `Production` scope and restricts `jsmith`'s Server administrator role to that scope.
+
+## Output
+
+`HPEOneView.Appliance.ScopeCollection`
+
+Each returned object includes the following key properties:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `Name` | String | The scope name. |
+| `Description` | String | An optional description. |
+| `Members` | Collection | The resources currently assigned to this scope. |
+| `Uri` | String | The REST URI for this scope resource. |
+
+## Related cmdlets
+
+- [New-OVScope](/cmdlets/security/new-ovscope)
+- [New-OVUser](/cmdlets/security/new-ovuser)
+- [Set-OVUser](/cmdlets/security/set-ovuser)
+- [Get-OVUser](/cmdlets/security/get-ovuser)

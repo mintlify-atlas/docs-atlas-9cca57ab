@@ -1,0 +1,150 @@
+---
+title: "Set-OVAlert"
+description: "Update an alert's assigned user, notes, or state on an HPE OneView appliance."
+---
+
+## Synopsis
+
+Update an HPE OneView alert's assignment, notes, or active/cleared state.
+
+## Syntax
+
+### Default — update assignment or notes
+
+```powershell
+Set-OVAlert
+    -InputObject <Object>
+    [-AssignToUser <String>]
+    [-Notes <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Cleared — mark alert as cleared
+
+```powershell
+Set-OVAlert
+    -InputObject <Object>
+    -Cleared
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+### Active — reactivate a cleared alert
+
+```powershell
+Set-OVAlert
+    -InputObject <Object>
+    -Active
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVAlert` modifies an existing alert object returned by `Get-OVAlert`. You can:
+
+- Assign the alert to a specific user with `-AssignToUser`.
+- Add free-text notes with `-Notes`.
+- Mark the alert as cleared with `-Cleared`.
+- Reactivate a previously cleared alert with `-Active`.
+
+If no `-Notes` value is supplied, the cmdlet automatically generates a note recording which parameters were changed.
+
+When a `Locked` alert state is changed with `-Cleared` or `-Active`, the request is sent with `?force=true` to override the lock.
+
+The updated alert object is returned.
+
+<Note>
+`Clear-OVAlert` is deprecated. Use `Set-OVAlert -Cleared` instead.
+</Note>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+The alert object to update. Must be an `HPEOneView.Alert` object (i.e., one returned by `Get-OVAlert`). Can be provided via the pipeline.
+
+Aliases: `-alertUri`, `-Alert`
+</ParamField>
+
+<ParamField path="AssignToUser" type="String">
+Username to assign the alert to. The user must exist on the appliance.
+</ParamField>
+
+<ParamField path="Notes" type="String">
+Free-text notes to attach to the alert. If omitted, the cmdlet generates an automatic note describing the change.
+</ParamField>
+
+<ParamField path="Cleared" type="SwitchParameter">
+Mark the alert state as `Cleared`. Mutually exclusive with `-Active`.
+</ParamField>
+
+<ParamField path="Active" type="SwitchParameter">
+Restore the alert state to `Active`. Mutually exclusive with `-Cleared`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+Specify one or more appliance connection objects or names. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Assign active interconnect alerts to a user
+
+```powershell
+$alerts = Get-OVAlert -HealthCategory Logical-Interconnect -AlertState Active
+
+foreach ($alert in $alerts)
+{
+    $updated = Set-OVAlert -InputObject $alert -AssignToUser Sally
+    "Assigned to Sally: {0}" -f $updated.description | Write-Host
+}
+```
+
+### Clear a specific alert with a note
+
+```powershell
+$alert = Get-OVAlert -AlertState Active | Where-Object description -match 'Fan failure'
+Set-OVAlert -InputObject $alert -Cleared -Notes 'Fan replaced and verified operational.'
+```
+
+### Clear all active alerts older than seven days
+
+```powershell
+$alerts = Get-OVAlert -AlertState Active
+
+foreach ($alert in $alerts)
+{
+    $created = Get-Date $alert.created
+    if ((Get-Date) -gt $created.AddDays(7))
+    {
+        $updated = Set-OVAlert -InputObject $alert -Cleared
+        "Cleared from {0}: {1}" -f $created, $updated.description | Write-Host
+    }
+}
+```
+
+### Reassign an alert and add notes in one call
+
+```powershell
+$alert = Get-OVAlert -AssignedToUser Bob -AlertState Active | Select-Object -First 1
+Set-OVAlert -InputObject $alert -AssignToUser Alice -Notes 'Reassigned to Alice for investigation.'
+```
+
+## Output
+
+`HPEOneView.Alert`
+
+The updated alert object is returned. Key properties:
+
+| Property | Type | Description |
+|---|---|---|
+| `alertState` | String | New state after the update |
+| `assignedToUser` | String | User the alert is now assigned to |
+| `notes` | String | Notes attached to the alert |
+| `modified` | DateTime | Timestamp of the last modification |
+
+## Related cmdlets
+
+- [Get-OVAlert](/cmdlets/alerts/get-ovalert)
+- [Remove-OVAlert](/cmdlets/alerts/clear-ovalert)

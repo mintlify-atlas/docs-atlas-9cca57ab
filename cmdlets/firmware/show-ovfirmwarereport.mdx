@@ -1,0 +1,139 @@
+---
+title: "Show-OVFirmwareReport"
+description: "Generate a firmware compliance report comparing installed firmware against a baseline for servers, enclosures, or enclosure groups."
+---
+
+## Synopsis
+
+Generates a firmware compliance report for managed resources, comparing installed component firmware versions against a target baseline.
+
+## Syntax
+
+```powershell
+Show-OVFirmwareReport
+    -InputObject <Object>
+    [-Baseline <Object>]
+    [-InstallationPolicy <String>]
+    [-Export]
+    [-Location <String>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Show-OVFirmwareReport` compares the currently installed firmware on managed resources against a specified firmware baseline (SPP) and reports the compliance status of each component. Resources can be server hardware, server profiles, enclosures, enclosure groups, or logical enclosures.
+
+The report enumerates individual firmware components (System ROM, iLO, Smart Array controllers, NICs, etc.) and shows the installed version, the baseline version, and whether an update or downgrade operation would be applied.
+
+The `-InstallationPolicy` parameter controls how compliance is evaluated:
+
+- `LowerThanBaseline` (default) — flags components where the installed version is older than the baseline.
+- `NotEqualToBaseline` — flags components where the installed version differs in either direction (also detects newer-than-baseline components).
+
+When `-Export` is specified, the report is saved as a CSV file to the path provided by `-Location`.
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The resource(s) to include in the report. Accepts server hardware, server profiles, enclosures, enclosure groups, and logical enclosures — individually or as pipeline input from cmdlets such as `Get-OVServer`, `Get-OVEnclosure`, or `Get-OVEnclosureGroup`.
+
+  Aliases: `Resource`
+</ParamField>
+
+<ParamField path="Baseline" type="Object">
+  The firmware baseline (SPP) to compare against. Accepts an `HPEOneView.Appliance.Baseline` object from `Get-OVBaseline`. When omitted, the report uses the baseline assigned to the resource's server profile or enclosure, if one is configured.
+</ParamField>
+
+<ParamField path="InstallationPolicy" type="String">
+  Controls which components are flagged as non-compliant.
+
+  | Value | Behavior |
+  |---|---|
+  | `LowerThanBaseline` (default) | Flag components older than the baseline |
+  | `NotEqualToBaseline` | Flag components that differ from the baseline in either direction |
+</ParamField>
+
+<ParamField path="Export" type="SwitchParameter">
+  Export the report to a CSV file instead of displaying it in the console.
+</ParamField>
+
+<ParamField path="Location" type="String">
+  Directory path where the exported CSV file is saved. Defaults to the current working directory. Only used when `-Export` is specified.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specify one or more appliance connection objects or hostnames. Defaults to the default connected appliance (`$Global:ConnectedSessions | Where-Object Default`).
+
+  Aliases: `Appliance`
+</ParamField>
+
+## Examples
+
+### Check firmware compliance for a single server
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+$server = Get-OVServer -Name "Encl1, bay 1"
+Show-OVFirmwareReport -InputObject $server -Baseline $baseline
+```
+
+Displays a component-level firmware compliance report for a single server.
+
+### Check all servers against a baseline
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+Get-OVServer | Show-OVFirmwareReport -Baseline $baseline
+```
+
+Generates a compliance report for every managed server, comparing against the specified baseline.
+
+### Report using NotEqualToBaseline policy
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+Get-OVServer | Show-OVFirmwareReport -Baseline $baseline -InstallationPolicy NotEqualToBaseline
+```
+
+Flags both older-than-baseline and newer-than-baseline components.
+
+### Generate a report for an entire enclosure group
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+Get-OVEnclosureGroup -Name "Production-EG" | Show-OVFirmwareReport -Baseline $baseline
+```
+
+Expands the enclosure group to all associated enclosures and reports firmware compliance across every component.
+
+### Export the report to CSV
+
+```powershell
+$baseline = Get-OVBaseline -SppName "HPE Service Pack for ProLiant" -Version "2023.11.01"
+Get-OVServer | Show-OVFirmwareReport -Baseline $baseline -Export -Location "C:\reports"
+```
+
+Saves the firmware compliance report as a CSV file in `C:\reports`.
+
+## Output
+
+`HPEOneView.Firmware.Report`
+
+Each row in the report represents a single firmware component on a managed device. Notable columns:
+
+| Column | Description |
+|---|---|
+| `Name` | Server or enclosure name |
+| `Component` | Firmware component name (e.g., `System ROM`, `iLO`) |
+| `Installed` | Currently installed firmware version |
+| `Baseline` | Version available in the specified SPP |
+| `Compliance` | `Compliant`, `Update`, or `Downgrade` |
+
+## Related cmdlets
+
+- [Get-OVBaseline](/cmdlets/firmware/get-ovbaseline)
+- [Update-OVServerFirmware](/cmdlets/firmware/update-ovserverfirmware)
+- [Get-OVServer](/cmdlets/server/get-ovserver)
+- [Get-OVEnclosure](/cmdlets/enclosures/get-ovenclosure)
+- [Get-OVEnclosureGroup](/cmdlets/enclosures/get-ovenclosuregroup)

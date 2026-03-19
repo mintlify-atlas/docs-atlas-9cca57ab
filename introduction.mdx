@@ -1,0 +1,94 @@
+---
+title: "HPE OneView PowerShell Library"
+description: "Automate HPE infrastructure management with PowerShell. Connect to HPE OneView and HPE Synergy appliances to manage servers, networking, storage, and more."
+---
+
+## What is POSH-HPEOneView?
+
+The HPE OneView PowerShell Library (`POSH-HPEOneView`) is an open-source PowerShell module that provides full language bindings to the [HPE OneView](http://hpe.com/info/oneview) REST API. It allows PowerShell developers, IT automation engineers, and DevOps teams to automate the deployment, provisioning, and management of HPE infrastructure.
+
+HPE OneView makes it simple to deploy and manage today's complex hybrid cloud infrastructure. This library unlocks that power from the PowerShell command line and automation scripts, enabling a software-defined, template-driven approach for managing compute, storage, and networking.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Get connected to your HPE OneView appliance in minutes
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Install from PowerShell Gallery on Windows, Mac, or Linux
+  </Card>
+  <Card title="Core Concepts" icon="book" href="/concepts/appliance-connections">
+    Learn about connections, permissions, and scopes
+  </Card>
+  <Card title="Cmdlet Reference" icon="terminal" href="/cmdlets/connection/connect-ovmgmt">
+    Browse the full cmdlet reference
+  </Card>
+</CardGroup>
+
+## Key capabilities
+
+<CardGroup cols={2}>
+  <Card title="Server lifecycle management" icon="server">
+    Add, power on/off, and manage physical servers and blades across HPE ProLiant and Synergy hardware
+  </Card>
+  <Card title="Server profiles & templates" icon="layer-group">
+    Define consistent server configurations as templates and apply them across your fleet
+  </Card>
+  <Card title="Networking automation" icon="network-wired">
+    Create Ethernet networks, FC fabrics, uplink sets, and logical interconnect groups
+  </Card>
+  <Card title="Storage management" icon="hard-drive">
+    Manage storage systems, pools, volumes, and volume templates from 3PAR/Primera/Alletra
+  </Card>
+  <Card title="Firmware management" icon="microchip">
+    Upload baselines, run compliance reports, and update firmware across your infrastructure
+  </Card>
+  <Card title="Cross-platform support" icon="laptop">
+    Runs on Windows PowerShell 5.1 and PowerShell 7.x on Windows, Linux, and macOS
+  </Card>
+</CardGroup>
+
+## Supported platforms
+
+| Platform | PowerShell Version | Support |
+|---|---|---|
+| Windows 10/11 (1709+) | Windows PowerShell 5.1 | Supported |
+| Windows 10/11 (1709+) | PowerShell 7.x | Supported |
+| Windows Server 2016+ | Windows PowerShell 5.1 | Supported |
+| Windows Server 2016+ | PowerShell 7.x | Supported |
+| Ubuntu 18.04+ | PowerShell Core 7.x | Supported |
+| macOS | PowerShell Core 7.x | Supported |
+| WSL (Ubuntu 18.04) | PowerShell Core 7.x | Supported |
+
+<Note>
+Windows PowerShell 4.0 and earlier are not supported. Windows 10 1709 (Fall Creators Update) or newer is required for Windows systems, due to the .NET Framework 4.7.2 dependency.
+</Note>
+
+## Prerequisites
+
+- **PowerShell 5.1** (Windows) or **PowerShell 7.x** (Windows/Linux/macOS)
+- **.NET Framework 4.7.2** (Windows PowerShell 5.1 only)
+- **HPE OneView 10.00** appliance or HPE Synergy Composer
+- Network access to the HPE OneView appliance API
+
+## Library version
+
+The current release is **HPEOneView.1000** (version `10.00.4265.2221`), targeting the HPE OneView 10.00 API (`X-API-Version: 7600`).
+
+Multiple library versions are published to PowerShell Gallery in parallel to support different HPE OneView appliance versions:
+
+| Library | HPE OneView Version | PSGallery |
+|---|---|---|
+| `HPEOneView.1000` | 10.00 | [Download](https://www.powershellgallery.com/packages/HPEOneView.1000) |
+| `HPEOneView.910` | 9.10 | [Download](https://www.powershellgallery.com/packages/HPEOneView.910) |
+| `HPEOneView.900` | 9.00 | [Download](https://www.powershellgallery.com/packages/HPEOneView.900) |
+| `HPEOneView.660` | 6.60 | [Download](https://www.powershellgallery.com/packages/HPEOneView.660) |
+
+<Warning>
+Only one version of the HPE OneView PowerShell library can be loaded in a single PowerShell session. Attempting to import multiple versions will throw an error.
+</Warning>
+
+## Getting help
+
+- Open an issue on [GitHub](https://github.com/HewlettPackard/POSH-HPEOneView/issues)
+- Join the [GitHub Discussions](https://github.com/HewlettPackard/POSH-HPEOneView/discussions) for general questions
+- Visit the [HPE OneView Community](http://hpe.com/info/oneviewcommunity)

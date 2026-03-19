@@ -1,0 +1,147 @@
+---
+title: "Get-OVServerProfile"
+description: "Retrieve one or more server profiles from an HPE OneView appliance."
+---
+
+## Synopsis
+
+Retrieves server profiles managed by an HPE OneView appliance. Supports filtering by name, label, or associated server hardware, and can surface non-compliant profiles.
+
+## Syntax
+
+```powershell
+Get-OVServerProfile
+    [-Name <String>]
+    [-NonCompliant]
+    [-Unassigned]
+    [-InputObject <Object>]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+```powershell
+Get-OVServerProfile
+    [-Name <String>]
+    [-Detailed]
+    [-Label <String>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+```powershell
+Get-OVServerProfile
+    [-Name <String>]
+    [-Export]
+    [-Location <String>]
+    [-InputObject <Object>]
+    [-Scope <Object>]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Get-OVServerProfile` queries the HPE OneView appliance for server profile resources. When called with no parameters, it returns all server profiles visible within the caller's current scope. Use `-Name` to filter by profile name, `-InputObject` to filter by the server hardware or server hardware type the profile is assigned to, or `-NonCompliant` to return only profiles that are out of compliance with their template.
+
+The `-Detailed` switch returns extended compliance and consistency details for each profile. The `-Export` switch serialises each profile to a JSON file in the directory specified by `-Location`.
+
+## Parameters
+
+<ParamField path="Name" type="string">
+  Name of the server profile to retrieve. Accepts wildcard characters (`*`). Alias: `profile`.
+</ParamField>
+
+<ParamField path="NonCompliant" type="switch">
+  Return only server profiles that are not compliant with their associated server profile template.
+</ParamField>
+
+<ParamField path="Unassigned" type="switch">
+  Return only server profiles that are not assigned to any server hardware.
+</ParamField>
+
+<ParamField path="InputObject" type="object">
+  A server hardware or server hardware type object returned by `Get-OVServer` or `Get-OVServerHardwareType`. When provided, only profiles associated with that resource are returned. Accepts pipeline input.
+</ParamField>
+
+<ParamField path="Label" type="string">
+  Filter results to profiles that have been assigned the specified label.
+</ParamField>
+
+<ParamField path="Scope" type="object">
+  Limits results to resources belonging to the specified HPE OneView scope. Defaults to `AllResourcesInScope`.
+</ParamField>
+
+<ParamField path="Detailed" type="switch">
+  Return extended detail, including per-category compliance state, for each matching profile. Mutually exclusive with `-NonCompliant` and `-Export`.
+</ParamField>
+
+<ParamField path="Export" type="switch">
+  Export each matching profile to a JSON file. Requires `-Location`. Alias: `x`.
+</ParamField>
+
+<ParamField path="Location" type="string">
+  Directory path where exported JSON files will be written. The directory is created if it does not exist. Requires `-Export`. Alias: `save`.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="object">
+  Specifies the HPE OneView appliance connection to query. Defaults to the default connected session. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+### Get all server profiles
+
+```powershell
+Get-OVServerProfile
+```
+
+Returns all server profiles from the default connected appliance.
+
+### Get a profile by name
+
+```powershell
+Get-OVServerProfile -Name 'Hyp-Clus-01'
+```
+
+Returns the server profile named `Hyp-Clus-01`.
+
+### Get profiles assigned to a specific server hardware type
+
+```powershell
+$SHT = Get-OVServerHardwareType -Name 'SY 480 Gen10 1'
+Get-OVServerProfile -InputObject $SHT
+```
+
+Returns all server profiles whose server hardware type is `SY 480 Gen10 1`.
+
+### Get all non-compliant profiles
+
+```powershell
+Get-OVServerProfile -NonCompliant
+```
+
+Returns only profiles that have drifted from their server profile template and require remediation.
+
+### Export profiles to disk
+
+```powershell
+Get-OVServerProfile -Export -Location 'C:\Backup\Profiles'
+```
+
+Exports all server profiles to JSON files in `C:\Backup\Profiles`.
+
+## Output
+
+`HPEOneView.ServerProfile` — One or more server profile objects. When `-Detailed` is specified the objects include extended compliance metadata.
+
+## Related cmdlets
+
+- [New-OVServerProfile](/cmdlets/server-profiles/new-ovserverprofile)
+- [Set-OVServerProfile](/cmdlets/server-profiles/set-ovserverprofile)
+- [Remove-OVServerProfile](/cmdlets/server-profiles/remove-ovserverprofile)
+- [Copy-OVServerProfile](/cmdlets/server-profiles/copy-ovserverprofile)
+- [Update-OVServerProfile](/cmdlets/server-profiles/update-ovserverprofile)
+- [Get-OVServerProfileTemplate](/cmdlets/server-profiles/get-ovserverprofiletemplate)

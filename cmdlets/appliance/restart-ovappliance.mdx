@@ -1,0 +1,85 @@
+---
+title: "Restart-OVAppliance"
+description: "Restart the HPE OneView appliance."
+---
+
+## Synopsis
+
+Initiates a restart of the HPE OneView appliance, disconnecting all active users and interrupting ongoing tasks.
+
+## Syntax
+
+```powershell
+Restart-OVAppliance
+    [-ApplianceConnection <Object>]
+    [-WhatIf]
+    [-Confirm]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Restart-OVAppliance` sends a reboot request to the HPE OneView appliance. Because this operation has a high impact, the cmdlet uses `SupportsShouldProcess` with `ConfirmImpact = High`, so a confirmation prompt is displayed by default.
+
+To suppress the confirmation prompt and restart without interaction, use `-Confirm:$false`. To simulate the operation without executing it, use `-WhatIf`.
+
+The cmdlet accepts appliance connections from the pipeline, enabling restart of multiple appliances in sequence.
+
+<Warning>
+Restarting the appliance will immediately disconnect all active user sessions and interrupt any running tasks. The appliance will be unavailable for several minutes while it reboots. Ensure all critical operations have completed before issuing this command.
+</Warning>
+
+## Parameters
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specifies the HPE OneView appliance connection(s) to restart. Accepts pipeline input. Defaults to the default connection from `${Global:ConnectedSessions}`. Alias: `Appliance`.
+</ParamField>
+
+<ParamField path="WhatIf" type="Switch">
+  Simulates the restart operation without actually sending the reboot request. Displays what would happen if the cmdlet ran.
+</ParamField>
+
+<ParamField path="Confirm" type="Switch">
+  Controls the confirmation prompt. Use `-Confirm:$false` to suppress the prompt and restart without interaction.
+</ParamField>
+
+## Examples
+
+**Example 1: Restart the default appliance with confirmation prompt**
+
+```powershell
+Restart-OVAppliance
+```
+
+Prompts the user to confirm before sending the reboot request to the default connected appliance.
+
+**Example 2: Restart without a confirmation prompt**
+
+```powershell
+Restart-OVAppliance -Confirm:$false
+```
+
+Restarts the appliance immediately without asking for confirmation. Use with caution in scripts.
+
+**Example 3: Preview the restart operation without executing it**
+
+```powershell
+Restart-OVAppliance -WhatIf
+```
+
+Shows what the cmdlet would do without actually restarting the appliance.
+
+**Example 4: Restart a specific appliance by connection**
+
+```powershell
+$Connection = Connect-OVMgmt -Hostname 'appliance.domain.com' -Credential $Creds
+Restart-OVAppliance -ApplianceConnection $Connection -Confirm:$false
+```
+
+Restarts the specified appliance without a confirmation prompt.
+
+## Output
+
+`System.Collections.ArrayList`
+
+An empty task collection. No task object is returned by the appliance for a reboot request; the cmdlet completes once the request is accepted.

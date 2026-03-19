@@ -1,0 +1,93 @@
+---
+title: "Set-OVApplianceGlobalSetting"
+description: "Update the value of a global configuration setting on the HPE OneView appliance."
+---
+
+## Synopsis
+
+Updates the value of a named global configuration setting on the HPE OneView appliance.
+
+## Syntax
+
+**By name:**
+
+```powershell
+Set-OVApplianceGlobalSetting
+    -Name <String>
+    -Value <String>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+**From pipeline (Get-OVApplianceGlobalSetting):**
+
+```powershell
+Get-OVApplianceGlobalSetting -Name <String> | Set-OVApplianceGlobalSetting
+    -Value <String>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVApplianceGlobalSetting` modifies the value of an existing HPE OneView global setting. Settings control appliance-wide behavior such as session timeouts, login banner text, and other administrative options.
+
+The cmdlet supports two parameter sets:
+
+- **Default**: Specify the setting by `-Name` and provide the new `-Value`.
+- **Pipeline**: Pipe a `HPEOneView.Appliance.GlobalSetting` object from `Get-OVApplianceGlobalSetting` and supply the new `-Value`.
+
+To discover available setting names, first run `Get-OVApplianceGlobalSetting`.
+
+## Parameters
+
+<ParamField path="InputObject" type="HPEOneView.Appliance.GlobalSetting">
+  A `HPEOneView.Appliance.GlobalSetting` object received from the pipeline (e.g. from `Get-OVApplianceGlobalSetting`). Alias: `Object`. Required in the Pipeline parameter set.
+</ParamField>
+
+<ParamField path="Name" type="String" required>
+  The exact name of the global setting to update. Required in the Default parameter set.
+</ParamField>
+
+<ParamField path="Value" type="String" required>
+  The new value to assign to the setting. Required in both parameter sets.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  Specifies the HPE OneView appliance connection(s) to configure. Defaults to the default connection from `${Global:ConnectedSessions}`. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+**Example 1: Update a setting by name**
+
+```powershell
+Set-OVApplianceGlobalSetting -Name 'applianceSessionTimeout' -Value '180'
+```
+
+Sets the appliance session timeout to 180 minutes.
+
+**Example 2: Update a setting via pipeline**
+
+```powershell
+Get-OVApplianceGlobalSetting -Name 'applianceSessionTimeout' | Set-OVApplianceGlobalSetting -Value '120'
+```
+
+Retrieves the session timeout setting and updates it to 120 minutes using pipeline input.
+
+**Example 3: Update a setting on a specific appliance**
+
+```powershell
+Set-OVApplianceGlobalSetting \
+    -Name 'loginBannerMessage' \
+    -Value 'Authorized users only.' \
+    -ApplianceConnection $MyConnection
+```
+
+Sets the login banner message on the specified appliance.
+
+## Output
+
+`HPEOneView.Appliance.GlobalSetting`
+
+Returns the updated `HPEOneView.Appliance.GlobalSetting` object reflecting the new value.

@@ -1,0 +1,98 @@
+---
+title: "Convert-OVServerProfile"
+description: "Convert a server profile to be compatible with a different server hardware type or enclosure group."
+---
+
+## Synopsis
+
+Converts an existing server profile to target a different server hardware type, enclosure group, or both.
+
+## Syntax
+
+```powershell
+Convert-OVServerProfile
+    [-InputObject] <Object>
+    [-ServerHardwareType <Object>]
+    [-EnclosureGroup <Object>]
+    [-Async]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Convert-OVServerProfile` re-targets a server profile to a different server hardware type and/or enclosure group. This is typically needed when:
+
+- Moving a workload from one server model to another (for example, migrating from a Gen9 to a Gen10 blade).
+- Reassigning a profile from a Synergy frame to a different enclosure group.
+
+The operation validates that the new hardware type supports all features configured in the profile and will report errors if incompatible settings are detected. Network connections and storage settings that are incompatible with the new hardware type may require manual adjustment after conversion.
+
+<Warning>
+Conversion modifies the profile in place. Review the profile's connections and storage settings after conversion to ensure compatibility with the target hardware type. A profile assigned to powered-on server hardware cannot be converted.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="object" required>
+  The server profile object to convert, as returned by `Get-OVServerProfile`. Accepts pipeline input. Aliases: `ServerProfile`, `Profile`.
+</ParamField>
+
+<ParamField path="ServerHardwareType" type="object">
+  The target server hardware type object (from `Get-OVServerHardwareType`). At least one of `-ServerHardwareType` or `-EnclosureGroup` must be provided.
+</ParamField>
+
+<ParamField path="EnclosureGroup" type="object">
+  The target enclosure group object (from `Get-OVEnclosureGroup`). At least one of `-ServerHardwareType` or `-EnclosureGroup` must be provided.
+</ParamField>
+
+<ParamField path="Async" type="switch">
+  Return a task object immediately without waiting for the conversion to complete.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="object">
+  Specifies the HPE OneView appliance connection. Defaults to the default connected session. Alias: `Appliance`.
+</ParamField>
+
+## Examples
+
+### Convert a profile to a new server hardware type
+
+```powershell
+$profile = Get-OVServerProfile -Name 'Web-Node-01'
+$newSHT  = Get-OVServerHardwareType -Name 'SY 480 Gen10 Plus 1'
+
+Convert-OVServerProfile -InputObject $profile -ServerHardwareType $newSHT | Wait-OVTaskComplete
+```
+
+Converts `Web-Node-01` to be compatible with the Gen10 Plus hardware type.
+
+### Convert a profile to a new enclosure group via the pipeline
+
+```powershell
+$newEG = Get-OVEnclosureGroup -Name 'Frame2 EG'
+
+Get-OVServerProfile -Name 'Hyp-Clus-01' |
+    Convert-OVServerProfile -EnclosureGroup $newEG | Wait-OVTaskComplete
+```
+
+### Convert a profile to both a new hardware type and enclosure group
+
+```powershell
+$newSHT = Get-OVServerHardwareType -Name 'SY 660 Gen10 1'
+$newEG  = Get-OVEnclosureGroup -Name 'Frame2 EG'
+
+Get-OVServerProfile -Name 'Compute-01' |
+    Convert-OVServerProfile -ServerHardwareType $newSHT -EnclosureGroup $newEG -Async
+```
+
+## Output
+
+`HPEOneView.Appliance.TaskResource` — An async task object tracking the conversion operation.
+
+## Related cmdlets
+
+- [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)
+- [New-OVServerProfile](/cmdlets/server-profiles/new-ovserverprofile)
+- [Get-OVServerHardwareType](/cmdlets/server/get-ovserverhardwaretype)
+- [Get-OVEnclosureGroup](/cmdlets/enclosures/get-ovenclosuregroup)

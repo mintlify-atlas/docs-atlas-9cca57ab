@@ -1,0 +1,170 @@
+---
+title: "Connection permissions"
+description: "Learn how HPE OneView session permissions work, how to use Push-OVAppliancePermission to operate with least privilege, and how to restore full permissions with Pop-OVAppliancePermission."
+---
+
+Permissions control what a user can do in HPE OneView and which resources they can act on. Every session carries a set of permissions derived from the roles and scopes assigned to the authenticated user or group.
+
+## What permissions are
+
+A permission combines two things:
+
+- **Role** — Grants access to a resource category with specific rights (read, create, delete, update, use). For example, the `Server administrator` role grants full rights to the `server hardware` category.
+- **Scope** (optional) — Further restricts the role to a subset of resources within that category. For example, a scope named `Test` can limit server hardware rights to only servers in that scope.
+
+A user or group can hold multiple permissions. Use `Set-OVUser` or `Set-OVLdapGroupRole` to manage the permissions assigned to a user or directory group.
+
+## The ActivePermissions property
+
+When you authenticate with `Connect-OVMgmt`, the appliance grants all permissions assigned to that user. These are stored as a collection of `HPEOneView.Appliance.ConnectionPermission` objects in the `ActivePermissions` property of the `HPEOneView.Appliance.Connection` object.
+
+```powershell
+$ConnectedSessions[0].ActivePermissions
+```
+
+```
+RoleName              ScopeName     Active
+--------              ---------     ------
+Network administrator Site A Admins True
+Server administrator  AllResources  True
+```
+
+Each `HPEOneView.Appliance.ConnectionPermission` object has three properties:
+
+<AccordionGroup>
+  <Accordion title="ConnectionPermission properties">
+
+| Property | Type | Description |
+|---|---|---|
+| `RoleName` | `[String]` | The name of the role granted by this permission (e.g., `Network administrator`, `Server administrator`). |
+| `ScopeName` | `[String]` | The name of the scope this permission is restricted to. `AllResources` means no scope restriction. |
+| `Active` | `[Bool]` | Whether this permission is currently active in the session. Set to `False` when reduced by `Push-OVAppliancePermission`. |
+
+  </Accordion>
+</AccordionGroup>
+
+## Reducing privileges with Push-OVAppliancePermission
+
+Operating with only the permissions required for a specific task is a security best practice — it reduces the risk of making an unintended change. Use `Push-OVAppliancePermission` to activate a subset of your assigned permissions.
+
+When you call `Push-OVAppliancePermission`, the library:
+
+1. Sends the selected permissions to the appliance.
+2. Receives a new `SessionID` token scoped to those permissions.
+3. Updates `ActivePermissions` — unselected permissions have their `Active` property set to `False`.
+
+<Warning>
+The `SessionID` in the connection object changes after `Push-OVAppliancePermission`. Any in-flight operations using the old token will fail. Always complete outstanding tasks before reducing permissions.
+</Warning>
+
+### Reduce to a single role
+
+This example reduces the active session to only the `Network administrator` role:
+
+```powershell
+# Show current SessionID
+$ConnectedSessions[0].SessionID
+# MzA3MzkzNDY4Mjc3tG-DBtvzHwq51sBGY1zk-7Uw1eT17BbJ
+
+Connect-OVMgmt -Hostname hpov1.domain.com -Credential (Get-Credential)
+
+$ConnectedSessions[0].ActivePermissions
+```
+
+```
+RoleName              ScopeName     Active
+--------              ---------     ------
+Network administrator Site A Admins True
+Server administrator  AllResources  True
+```
+
+```powershell
+# Select only the Network administrator permission
+$NewPermissions = $ConnectedSessions[0].ActivePermissions | Where-Object RoleName -match 'Network'
+Push-OVAppliancePermission -SetActivePermissions $NewPermissions
+```
+
+```
+RoleName              ScopeName     Active
+--------              ---------     ------
+Network administrator Site A Admins True
+Server administrator  AllResources  False
+```
+
+```powershell
+# Show updated SessionID
+$ConnectedSessions[0].SessionID
+# OTA0Mjg2Nzc5Nzk1FVcdSabKJ5wqD-ScZKYOHsJk8WqWDRYX
+```
+
+### Reduce to a specific scope
+
+This example restricts the session to only permissions associated with the `Site A Admins` scope:
+
+```powershell
+# Show current SessionID
+$ConnectedSessions[0].SessionID
+# NzI2MTMxNzEzMjQztb0Rj0hqWwiLa3qFWgKvo13Qn5vs4k1r
+
+$ConnectedSessions[0].ActivePermissions
+```
+
+```
+RoleName              ScopeName     Active
+--------              ---------     ------
+Network administrator Site A Admins True
+Server administrator  AllResources  True
+Server administrator  AllResources  True
+```
+
+```powershell
+# Select only the permissions scoped to 'Site A Admins'
+$NewPermissions = $ConnectedSessions[0].ActivePermissions | Where-Object ScopeName -match 'Site A Admins'
+Push-OVAppliancePermission -SetActivePermissions $NewPermissions
+```
+
+```
+RoleName              ScopeName     Active
+--------              ---------     ------
+Network administrator Site A Admins True
+Server administrator  AllResources  False
+Server administrator  AllResources  False
+```
+
+```powershell
+# Show updated SessionID
+$ConnectedSessions[0].SessionID
+# ATh0MjQ5MjM1ODE0fFqfxUPWWGo4Y-QsPWRpZDsYxmy8Xejb
+```
+
+## Restoring full permissions with Pop-OVAppliancePermission
+
+To restore your session to the full set of permissions originally granted at login, call `Pop-OVAppliancePermission`:
+
+```powershell
+Pop-OVAppliancePermission
+```
+
+This reverses the effect of `Push-OVAppliancePermission`, reactivates all previously deactivated permissions, and issues a new `SessionID` with the original permission set.
+
+<Tip>
+Think of `Push-OVAppliancePermission` and `Pop-OVAppliancePermission` as a stack: push reduces privileges for a scoped task, pop restores them when the task is done.
+</Tip>
+
+## Targeting a specific connection
+
+Both cmdlets accept an `-ApplianceConnection` parameter. By default, they act on the default connection. To target a specific appliance:
+
+```powershell
+$NewPermissions = $ConnectedSessions[1].ActivePermissions | Where-Object RoleName -match 'Network'
+Push-OVAppliancePermission -SetActivePermissions $NewPermissions -ApplianceConnection $ConnectedSessions[1]
+```
+
+## See also
+
+- [Appliance connections](/concepts/appliance-connections) — How `$ConnectedSessions` and connection objects work
+- [Scopes and roles](/concepts/scopes-and-roles) — Built-in roles and scope-based filtering
+- `Get-Help Push-OVAppliancePermission`
+- `Get-Help Pop-OVAppliancePermission`
+- `Get-Help Set-OVUser`
+- `Get-Help Set-OVLdapGroupRole`
