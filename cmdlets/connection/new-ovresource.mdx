@@ -1,0 +1,82 @@
+---
+title: "New-OVResource"
+description: "Create a new resource on an HPE OneView appliance by POSTing an object to a REST API URI."
+---
+
+## Synopsis
+
+Creates a new resource on an HPE OneView appliance by sending an HTTP POST to the specified URI.
+
+## Syntax
+
+```powershell
+New-OVResource
+    [-Uri] <String>
+    [-InputObject] <Object>
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`New-OVResource` is a low-level cmdlet that issues an HTTP `POST` to a specified URI with the provided object as the request body. It is the underlying mechanism used by higher-level creation cmdlets such as `New-OVNetwork`, `New-OVStorageVolume`, and similar.
+
+Use `New-OVResource` directly when you need to create a resource type that does not have a dedicated named cmdlet.
+
+<Note>
+For most resource types, a dedicated `New-OV*` or `Add-OV*` cmdlet exists and is the recommended approach. Use `New-OVResource` when no dedicated cmdlet is available.
+</Note>
+
+## Parameters
+
+<ParamField path="Uri" type="String" required>
+  The REST API URI endpoint to POST to. Must start with `/`. For example, `/rest/ethernet-networks`.
+</ParamField>
+
+<ParamField path="InputObject" type="Object" required>
+  The resource object to create. Accepts pipeline input. Alias: `Resource`. The object is serialized to JSON and sent as the request body.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Alias: `Appliance`. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Create a resource from a hashtable
+
+```powershell
+$networkBody = @{
+    type           = 'NetworkV4'
+    name           = 'Dev-VLAN-200'
+    vlanId         = 200
+    purpose        = 'General'
+    smartLink      = $true
+    privateNetwork = $false
+    ethernetNetworkType = 'Tagged'
+}
+
+New-OVResource -Uri '/rest/ethernet-networks' -InputObject $networkBody
+```
+
+### Create a resource via pipeline
+
+```powershell
+$body = [PSCustomObject]@{
+    name        = 'MyScope'
+    description = 'Created via New-OVResource'
+    type        = 'ScopeV3'
+}
+
+$body | New-OVResource -Uri '/rest/scopes'
+```
+
+## Output
+
+Returns the created resource object as returned by the appliance (the POST response body).
+
+## Related cmdlets
+
+- [Send-OVRequest](/cmdlets/connection/send-ovrequest)
+- [Set-OVResource](/cmdlets/connection/set-ovresource)
+- [Remove-OVResource](/cmdlets/connection/remove-ovresource)

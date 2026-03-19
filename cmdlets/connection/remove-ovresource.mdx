@@ -1,0 +1,80 @@
+---
+title: "Remove-OVResource"
+description: "Delete an existing resource from an HPE OneView appliance by sending an HTTP DELETE to its REST URI."
+---
+
+## Synopsis
+
+Deletes an existing resource from an HPE OneView appliance by sending an HTTP `DELETE` to the resource's URI.
+
+## Syntax
+
+```powershell
+Remove-OVResource
+    [-InputObject] <Object>
+    [-Force]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Remove-OVResource` is a low-level cmdlet that performs an HTTP `DELETE` on the URI embedded in the resource object (`$InputObject.uri`). It is the underlying mechanism used by higher-level `Remove-OV*` cmdlets.
+
+The input object **must have a `.uri` property** pointing to the resource's REST URI — all objects returned by `Get-OV*` cmdlets include this property.
+
+<Warning>
+This operation is permanent and cannot be undone. Ensure you have the correct resource before proceeding. Some resources may have dependencies that prevent deletion; use `-Force` to override dependency checks when supported.
+</Warning>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The resource object to delete. Accepts pipeline input. Aliases: `Resource`, `ro`, `nameOruri`, `uri`, `name`. Must contain a `.uri` property.
+</ParamField>
+
+<ParamField path="Force" type="Switch">
+  Appends `?force=true` to the DELETE request URI, allowing deletion of resources that would otherwise be blocked by dependency checks.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Alias: `Appliance`. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Delete a resource object
+
+```powershell
+$network = Get-OVNetwork -Name 'Dev-VLAN-200'
+Remove-OVResource -InputObject $network
+```
+
+### Delete via pipeline
+
+```powershell
+Get-OVNetwork -Name 'Old-Network' | Remove-OVResource
+```
+
+### Force deletion
+
+```powershell
+$resource = Get-OVScope -Name 'DeprecatedScope'
+Remove-OVResource -InputObject $resource -Force
+```
+
+### Delete across multiple appliances
+
+```powershell
+Get-OVNetwork -Name 'TestNetwork' -ApplianceConnection $ConnectedSessions | Remove-OVResource
+```
+
+## Output
+
+Returns nothing on success. For asynchronous deletions, returns an `HPEOneview.Appliance.TaskResource` that can be passed to `Wait-OVTaskComplete`.
+
+## Related cmdlets
+
+- [Send-OVRequest](/cmdlets/connection/send-ovrequest)
+- [New-OVResource](/cmdlets/connection/new-ovresource)
+- [Set-OVResource](/cmdlets/connection/set-ovresource)

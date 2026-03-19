@@ -1,0 +1,93 @@
+---
+title: "Set-OVResource"
+description: "Update an existing resource on an HPE OneView appliance by PUTting a modified object to its REST URI."
+---
+
+## Synopsis
+
+Updates an existing resource on an HPE OneView appliance by sending an HTTP `PUT` to the resource's URI.
+
+## Syntax
+
+```powershell
+Set-OVResource
+    [-InputObject] <Object>
+    [-Force]
+    [-ApplianceConnection <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Set-OVResource` is a low-level cmdlet that performs an HTTP `PUT` on the URI embedded in the resource object (`$InputObject.uri`). It is the underlying mechanism used by higher-level `Set-OV*` cmdlets.
+
+The typical workflow is:
+
+1. Retrieve the current resource object (e.g., using `Get-OVNetwork`).
+2. Modify the desired properties on the PowerShell object.
+3. Pass the modified object to `Set-OVResource`.
+
+The input object **must have a `.uri` property** pointing to the resource's REST URI — all objects returned by `Get-OV*` cmdlets include this property.
+
+<Note>
+For most resource types, a dedicated `Set-OV*` cmdlet exists and is the recommended approach. Use `Set-OVResource` when no dedicated cmdlet is available, or when the dedicated `Set-OV*` cmdlet is not yet implemented (such as `Set-OVServerProfile` and `Set-OVServerProfileTemplate` in the current release).
+</Note>
+
+## Parameters
+
+<ParamField path="InputObject" type="Object" required>
+  The resource object to update. Accepts pipeline input. Alias: `Resource`. Must contain a `.uri` property. The object is serialized to JSON and sent as a PUT request body.
+</ParamField>
+
+<ParamField path="Force" type="Switch">
+  Appends `?force=true` to the URI, bypassing some appliance-side safety checks. Use with caution.
+</ParamField>
+
+<ParamField path="ApplianceConnection" type="Object">
+  The appliance connection object or name. Alias: `Appliance`. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### Update an Ethernet network's bandwidth
+
+```powershell
+$network = Get-OVNetwork -Name 'Prod-VLAN-100'
+$network.defaultTypicalBandwidth = 5000
+$network.defaultMaximumBandwidth = 10000
+Set-OVResource -InputObject $network | Wait-OVTaskComplete
+```
+
+### Update a server profile (workaround for unimplemented Set-OVServerProfile)
+
+```powershell
+$profile = Get-OVServerProfile -Name 'Web-Node-01'
+$profile.description = 'Updated description'
+$profile | Set-OVResource | Wait-OVTaskComplete
+```
+
+### Update a scope description
+
+```powershell
+$scope = Get-OVScope -Name 'Production'
+$scope.description = 'Production environment scope - updated'
+Set-OVResource -InputObject $scope
+```
+
+### Force update with conflict bypass
+
+```powershell
+$resource = Get-OVEnclosureGroup -Name 'Synergy-EG'
+$resource.description = 'Updated enclosure group'
+Set-OVResource -InputObject $resource -Force
+```
+
+## Output
+
+Returns the updated resource object as returned by the appliance (the PUT response body), or an `HPEOneview.Appliance.TaskResource` for long-running operations.
+
+## Related cmdlets
+
+- [Send-OVRequest](/cmdlets/connection/send-ovrequest)
+- [New-OVResource](/cmdlets/connection/new-ovresource)
+- [Remove-OVResource](/cmdlets/connection/remove-ovresource)

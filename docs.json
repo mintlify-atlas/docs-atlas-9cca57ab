@@ -73,7 +73,11 @@
               "cmdlets/connection/disconnect-ovmgmt",
               "cmdlets/connection/set-ovappliancedefaultconnection",
               "cmdlets/connection/push-ovappliancepermission",
-              "cmdlets/connection/pop-ovappliancepermission"
+              "cmdlets/connection/pop-ovappliancepermission",
+              "cmdlets/connection/send-ovrequest",
+              "cmdlets/connection/new-ovresource",
+              "cmdlets/connection/set-ovresource",
+              "cmdlets/connection/remove-ovresource"
             ]
           },
           {

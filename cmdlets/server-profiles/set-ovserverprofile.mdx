@@ -1,76 +1,52 @@
 ---
 title: "Set-OVServerProfile"
-description: "Update an existing server profile's configuration."
+description: "Not implemented in this release. Use Save-OVServerProfile or Set-OVResource for direct profile updates."
 ---
 
 ## Synopsis
 
-Modifies an existing server profile resource on an HPE OneView appliance.
-
-## Syntax
-
-```powershell
-Set-OVServerProfile
-    [-ServerProfile] <Object>
-    [-ApplianceConnection <Object>]
-    [-Async]
-    [<CommonParameters>]
-```
+Reserved for future use. This cmdlet is not implemented in the current release.
 
 ## Description
 
-`Set-OVServerProfile` applies modifications to an existing server profile object and saves the updated configuration back to the HPE OneView appliance.
-
-The typical workflow is:
-
-1. Retrieve the profile with `Get-OVServerProfile`.
-2. Modify the returned object's properties directly in PowerShell.
-3. Pass the modified object to `Set-OVServerProfile`.
-
 <Warning>
-`Set-OVServerProfile` sends the entire profile object back to the appliance. Any unsaved changes to sub-resources (connections, storage, etc.) must be reflected in the object before calling this cmdlet, otherwise they will be overwritten.
+`Set-OVServerProfile` is defined in the HPE OneView 10.00 PowerShell library but is **not implemented**. Calling it will throw:
+
+```
+Not implemented.
+```
+
+To update a server profile, use `Set-OVResource` to PUT the modified object directly, or use the more targeted `Update-OVServerProfile` cmdlet to remediate compliance against a template, or `Save-OVServerProfile` to save a profile in edit mode.
 </Warning>
 
-## Parameters
+## Alternative approaches
 
-<ParamField path="ServerProfile" type="object" required>
-  The server profile object to update, as returned by `Get-OVServerProfile`. Accepts pipeline input.
-</ParamField>
-
-<ParamField path="Async" type="switch">
-  Return a task object immediately without waiting for the update to complete.
-</ParamField>
-
-<ParamField path="ApplianceConnection" type="object">
-  Specifies the HPE OneView appliance connection. Defaults to the default connected session. Alias: `Appliance`.
-</ParamField>
-
-## Examples
-
-### Update a profile description
+### Modify a profile property and save with Set-OVResource
 
 ```powershell
+# Get the profile
 $profile = Get-OVServerProfile -Name 'Web-Node-01'
-$profile.description = 'Updated description for Web-Node-01'
-Set-OVServerProfile -ServerProfile $profile | Wait-OVTaskComplete
+
+# Modify a property
+$profile.description = 'Updated description'
+
+# Save changes back using the low-level Set-OVResource cmdlet
+Set-OVResource -InputObject $profile | Wait-OVTaskComplete
 ```
 
-### Update a profile and return immediately
+### Remediate a profile against its template
 
 ```powershell
-$profile = Get-OVServerProfile -Name 'Web-Node-01'
-$profile.description = 'Async update example'
-$task = Set-OVServerProfile -ServerProfile $profile -Async
-Write-Host "Task URI: $($task.uri)"
+# Check for non-compliant profiles
+$nonCompliant = Get-OVServerProfile -NonCompliant
+
+# Update all non-compliant profiles
+$nonCompliant | Update-OVServerProfile | Wait-OVTaskComplete
 ```
-
-## Output
-
-`HPEOneView.Appliance.TaskResource` — An async task object tracking the update operation.
 
 ## Related cmdlets
 
 - [Get-OVServerProfile](/cmdlets/server-profiles/get-ovserverprofile)
+- [Update-OVServerProfile](/cmdlets/server-profiles/update-ovserverprofile)
 - [New-OVServerProfile](/cmdlets/server-profiles/new-ovserverprofile)
 - [Remove-OVServerProfile](/cmdlets/server-profiles/remove-ovserverprofile)
-- [Update-OVServerProfile](/cmdlets/server-profiles/update-ovserverprofile)

@@ -1,0 +1,142 @@
+---
+title: "Send-OVRequest"
+description: "Send an authenticated REST API request directly to an HPE OneView appliance REST endpoint."
+---
+
+## Synopsis
+
+Sends an HTTP request to a specified URI on an HPE OneView appliance and returns the response.
+
+## Syntax
+
+```powershell
+Send-OVRequest
+    [-Uri] <String>
+    [[-Method] <String>]
+    [[-Body] <Object>]
+    [[-Start] <Int>]
+    [[-Count] <Int>]
+    [[-AddHeader] <Hashtable>]
+    [[-OverrideContentType] <String>]
+    [[-OverrideTimeout] <Int>]
+    [-Hostname <Object>]
+    [<CommonParameters>]
+```
+
+## Description
+
+`Send-OVRequest` is the core low-level REST API cmdlet used by nearly all other HPE OneView library cmdlets. It handles authentication token injection, session management, pagination, and response error parsing.
+
+You can use `Send-OVRequest` directly to:
+- Access REST API endpoints not yet covered by a higher-level cmdlet
+- Perform PATCH operations
+- Retrieve raw JSON responses for custom processing
+- Pass custom HTTP headers
+
+The URI must start with a `/` (e.g., `/rest/server-hardware`).
+
+<Note>
+Most use cases are served by the higher-level named cmdlets (e.g., `Get-OVServer`, `New-OVNetwork`). Use `Send-OVRequest` only when a dedicated cmdlet does not exist for the operation you need.
+</Note>
+
+## Parameters
+
+<ParamField path="Uri" type="String" required>
+  The REST API URI path, starting with `/`. For example, `/rest/server-hardware` or `/rest/server-profiles/abc123`.
+</ParamField>
+
+<ParamField path="Method" type="String">
+  HTTP method. Valid values: `GET`, `POST`, `DELETE`, `PATCH`, `PUT`. Defaults to `GET`.
+</ParamField>
+
+<ParamField path="Body" type="Object">
+  The request body. Used with `POST`, `PUT`, and `PATCH` requests. Accepts a PowerShell object or hashtable; the library serializes it to JSON automatically.
+</ParamField>
+
+<ParamField path="Start" type="Int">
+  The zero-based start index for paginated collection responses. Defaults to `0`.
+</ParamField>
+
+<ParamField path="Count" type="Int">
+  The maximum number of records to return for paginated collections. Defaults to `0` (library handles pagination automatically).
+</ParamField>
+
+<ParamField path="AddHeader" type="Hashtable">
+  Additional HTTP request headers to include. For example, `@{ 'X-Custom-Header' = 'value' }`.
+</ParamField>
+
+<ParamField path="OverrideContentType" type="String">
+  Override the default `application/json` Content-Type header for the request.
+</ParamField>
+
+<ParamField path="OverrideTimeout" type="Int">
+  Override the default 20-minute request timeout (in seconds).
+</ParamField>
+
+<ParamField path="Hostname" type="Object">
+  The appliance connection object or name. Aliases: `Appliance`, `ApplianceConnection`. Defaults to the default connection in `$ConnectedSessions`.
+</ParamField>
+
+## Examples
+
+### GET a specific resource by URI
+
+```powershell
+$uri = '/rest/server-hardware/abc123def456'
+$server = Send-OVRequest -Uri $uri
+$server.name
+```
+
+### POST to create a resource
+
+```powershell
+$body = @{
+    type = 'NetworkV4'
+    name = 'Prod-VLAN-100'
+    vlanId = 100
+    purpose = 'General'
+    smartLink = $true
+    privateNetwork = $false
+}
+
+Send-OVRequest -Uri '/rest/ethernet-networks' -Method POST -Body $body
+```
+
+### PATCH to modify a resource
+
+```powershell
+$patch = @(
+    @{
+        op    = 'replace'
+        path  = '/description'
+        value = 'Updated via PATCH'
+    }
+)
+
+Send-OVRequest -Uri '/rest/server-profiles/abc123' -Method PATCH -Body $patch
+```
+
+### GET with pagination
+
+```powershell
+# Retrieve records 51-100
+Send-OVRequest -Uri '/rest/alerts' -Start 50 -Count 50
+```
+
+### Use a named appliance connection
+
+```powershell
+$connection = $ConnectedSessions | Where-Object Name -eq 'myappliance.corp.com'
+Send-OVRequest -Uri '/rest/appliance/network-interfaces' -Hostname $connection
+```
+
+## Output
+
+Returns the deserialized JSON response body as a PowerShell object. For collection responses, the library automatically follows pagination and returns a consolidated result.
+
+## Related cmdlets
+
+- [Connect-OVMgmt](/cmdlets/connection/connect-ovmgmt)
+- [New-OVResource](/cmdlets/connection/new-ovresource)
+- [Set-OVResource](/cmdlets/connection/set-ovresource)
+- [Remove-OVResource](/cmdlets/connection/remove-ovresource)
